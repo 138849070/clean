@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import com.clean.cleaner.App
 import com.clean.cleaner.R
+import com.clean.cleaner.scan.ShizukuShell
 import com.clean.cleaner.util.Settings
 import com.clean.cleaner.util.StatusBarUtil
 
@@ -42,6 +43,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<android.view.View>(R.id.btnBack).setOnClickListener { finish() }
 
         val swAutoScan = findViewById<Switch>(R.id.swAutoScan)
+        val swShizuku = findViewById<Switch>(R.id.swShizuku)
         val swAutoClean = findViewById<Switch>(R.id.swAutoClean)
         val swEmptyFiles = findViewById<Switch>(R.id.swEmptyFiles)
         val swDarkFollow = findViewById<Switch>(R.id.swDarkFollow)
@@ -53,6 +55,7 @@ class SettingsActivity : AppCompatActivity() {
         val etPeriodicDays = findViewById<EditText>(R.id.etPeriodicDays)
 
         swAutoScan.isChecked = Settings.autoScan(this)
+        swShizuku.isChecked = Settings.shizukuAccess(this)
         swAutoClean.isChecked = Settings.autoClean(this)
         swEmptyFiles.isChecked = Settings.emptyFiles(this)
         swDarkFollow.isChecked = Settings.darkFollow(this)
@@ -64,6 +67,13 @@ class SettingsActivity : AppCompatActivity() {
         etPeriodicDays.setText(Settings.periodicDays(this).toString())
 
         swAutoScan.setOnCheckedChangeListener { _, v -> Settings.setAutoScan(this, v) }
+        // Shizuku：访问 Android/data 受限目录
+        swShizuku.setOnCheckedChangeListener { _, v ->
+            Settings.setShizukuAccess(this, v)
+            if (v && !ShizukuShell.available()) {
+                ShizukuShell.requestPermission(9090)
+            }
+        }
         // SAF 授权：直接打开系统文件选择器并定位到 Android/data
         findViewById<android.widget.TextView>(R.id.btnSafAuthorize).setOnClickListener {
             val initialUri = try {
@@ -116,6 +126,21 @@ class SettingsActivity : AppCompatActivity() {
         etExclude.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 Settings.setExclude(this, etExclude.text.toString())
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 9090) {
+            if (ShizukuShell.available()) {
+                Toast.makeText(this, "Shizuku 已授权，重新扫描即可扫全 Android/data", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Shizuku 未授权：请先安装 Shizuku 并在其中授权本应用", Toast.LENGTH_LONG).show()
             }
         }
     }

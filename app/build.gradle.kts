@@ -11,8 +11,8 @@ android {
         applicationId = "com.clean.cleaner"
         minSdk = 24
         targetSdk = 33
-        versionCode = 9
-        versionName = "1.7.0"
+        versionCode = 10
+        versionName = "1.8.0"
     }
 
     buildTypes {
@@ -43,6 +43,9 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    // SAF 文档树访问（MT管理器同款，读取 Android/data）
+    // SAF 文档树访问（读取 Android/data）
     implementation("androidx.documentfile:documentfile:1.0.1")
+    // Shizuku：以 shell 权限访问 Android/data（无需 root）
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 }

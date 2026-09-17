@@ -49,6 +49,12 @@ object Settings {
         p(ctx).edit().putBoolean("dark_follow", v).apply()
     }
 
+    /** 通过 Shizuku 访问 Android/data 受限目录 */
+    fun shizukuAccess(ctx: Context): Boolean = p(ctx).getBoolean("shizuku_access", true)
+    fun setShizukuAccess(ctx: Context, v: Boolean) {
+        p(ctx).edit().putBoolean("shizuku_access", v).apply()
+    }
+
     /** SAF 授权的 Android/data 目录 URI（MT管理器同款方式） */
     fun safTreeUri(ctx: Context): String? = p(ctx).getString("saf_tree_uri", null)
     fun setSafTreeUri(ctx: Context, v: String) {

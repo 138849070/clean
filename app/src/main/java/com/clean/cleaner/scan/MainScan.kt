@@ -88,11 +88,22 @@ class MainScan(
         val media = MediaScanner.scan(context)
         // 2) 文件遍历统计明细
         if (root.exists()) walkDir(root, inJunk = false, inResidue = false)
-        // 3) SAF 授权通道：Android/data 受限目录全量统计（MT管理器同款，无需 Shizuku）
+        // 3) Shizuku：Android/data 受限目录全量统计（首选，无需 root）
         var dataFiles = 0L
         var dataSize = 0L
         var dataCache = 0L
-        if (Settings.safTreeUri(context) != null) {
+        if (Settings.shizukuAccess(context) && ShizukuShell.available()) {
+            try {
+                ShizukuShell.scanAndroidData()?.let {
+                    dataFiles = it.fileCount
+                    dataSize = it.totalSize
+                    dataCache = it.cacheSize
+                }
+            } catch (ignored: Exception) {
+            }
+        }
+        // 4) SAF 授权通道兜底（MT管理器同款方式）
+        if (dataFiles == 0L && Settings.safTreeUri(context) != null) {
             try {
                 SafScanner.scan(context)?.let {
                     dataFiles = it.fileCount
