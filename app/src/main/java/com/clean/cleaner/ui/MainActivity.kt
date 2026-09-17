@@ -24,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvTotalCleaned: TextView
     private lateinit var tvSessionCleaned: TextView
     private lateinit var grid: LinearLayout
+    private var hasCheckedPermission = false
 
     private data class GridItem(val name: String, val emoji: String, val type: String, val tag: String? = null)
 
@@ -73,14 +74,35 @@ class MainActivity : AppCompatActivity() {
 
         buildGrid()
         refreshHeader()
+        showCrashLogIfAny()
     }
 
     override fun onResume() {
         super.onResume()
-        if (!PermissionActivity.hasStorageAccess()) {
-            startActivityForResult(Intent(this, PermissionActivity::class.java), 1001)
+        if (!hasCheckedPermission) {
+            hasCheckedPermission = true
+            if (!PermissionActivity.hasStorageAccess()) {
+                startActivityForResult(Intent(this, PermissionActivity::class.java), 1001)
+            }
         }
         refreshHeader()
+    }
+
+    /** 若上次闪退留有日志，弹窗展示，便于定位问题 */
+    private fun showCrashLogIfAny() {
+        try {
+            val file = App.crashLogFile()
+            if (file.exists() && file.length() > 0) {
+                val content = file.readText()
+                AlertDialog.Builder(this)
+                    .setTitle("上次运行出现异常")
+                    .setMessage("崩溃信息已保存到 Download/clean_crash.txt，可反馈此信息：\n\n${content.take(1500)}")
+                    .setPositiveButton("知道了", null)
+                    .setNegativeButton("清除记录") { _, _ -> file.delete() }
+                    .show()
+            }
+        } catch (ignored: Exception) {
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -147,7 +169,7 @@ class MainActivity : AppCompatActivity() {
     private fun showAbout() {
         AlertDialog.Builder(this)
             .setTitle("Clean 清理")
-            .setMessage("版本 1.1.0\n\n免费安卓存储清理工具，无会员、无广告、无网络请求。\n\n清理功能均在本机完成，不会上传任何数据。")
+            .setMessage("版本 1.1.1\n\n免费安卓存储清理工具，无会员、无广告、无网络请求。\n\n清理功能均在本机完成，不会上传任何数据。")
             .setPositiveButton("好的", null)
             .show()
     }

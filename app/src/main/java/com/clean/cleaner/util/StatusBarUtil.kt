@@ -12,21 +12,26 @@ object StatusBarUtil {
 
     /** 透明状态栏 + 设置图标明暗。lightIcons=true 表示深色图标（浅色背景） */
     fun transparent(activity: Activity, lightIcons: Boolean) {
-        val window = activity.window
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.statusBarColor = Color.TRANSPARENT
-        if (Build.VERSION.SDK_INT >= 30) {
-            window.insetsController?.setSystemBarsAppearance(
-                if (lightIcons) WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
-                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            val flag = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility =
-                if (lightIcons) window.decorView.systemUiVisibility or flag
-                else window.decorView.systemUiVisibility and flag.inv()
+        try {
+            val window = activity.window
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            window.statusBarColor = Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= 30) {
+                val controller = window.insetsController
+                controller?.setSystemBarsAppearance(
+                    if (lightIcons) WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val flag = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility =
+                    if (lightIcons) window.decorView.systemUiVisibility or flag
+                    else window.decorView.systemUiVisibility and flag.inv()
+            }
+        } catch (ignored: Throwable) {
+            // 个别 ROM 可能限制系统栏配置，忽略即可，不影响使用
         }
     }
 
