@@ -16,6 +16,8 @@ class JunkScanner(
     val items = mutableListOf<ScanItem>()
     val apkItems = mutableListOf<ScanItem>()
     val emptyDirs = mutableListOf<ScanItem>()
+    /** Shizuku 扫到的 Android/data 缓存条目数（诊断用） */
+    var androidDataCacheCount = 0
 
     private val junkDirNames = setOf(
         "cache", "caches", ".cache", "tmp", "temp",
@@ -61,6 +63,7 @@ class JunkScanner(
     /** 通过 Shizuku 扫描 Android/data 下各应用的缓存目录（含自定义缓存目录） */
     private fun scanAndroidDataCaches() {
         val caches = ShizukuShell.listAndroidDataCaches()
+        androidDataCacheCount = caches.size
         for (entry in caches) {
             if (Thread.currentThread().isInterrupted) return
             val name = entry.path.substringAfterLast('/')

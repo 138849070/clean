@@ -85,7 +85,7 @@ object ShizukuShell {
         if (!available()) return emptyList()
         val dataRoot = "/storage/emulated/0/Android/data"
         val script =
-            "find $dataRoot -mindepth 2 -maxdepth 6 -type d \\(" +
+            "find $dataRoot -mindepth 2 -maxdepth 8 -type d \\(" +
                 " -name \"cache\" -o -name \"caches\" -o -name \".cache\" -o -name \"code_cache\"" +
                 " -o -iname \"*cache*\" -o -iname \"*temp*\" -o -iname \"*log*\" -o -iname \"*thumb*\"" +
                 " \\) 2>/dev/null | while read d; do du -sk \"\$d\" 2>/dev/null; done"

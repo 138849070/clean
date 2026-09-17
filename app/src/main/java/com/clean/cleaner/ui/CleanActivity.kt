@@ -19,6 +19,7 @@ import com.clean.cleaner.R
 import com.clean.cleaner.scan.CleanEngine
 import com.clean.cleaner.scan.JunkScanner
 import com.clean.cleaner.scan.ScanItem
+import com.clean.cleaner.scan.ShizukuShell
 import com.clean.cleaner.util.SizeUtils
 import com.clean.cleaner.util.StatusBarUtil
 import java.util.concurrent.atomic.AtomicLong
@@ -43,6 +44,7 @@ class CleanActivity : AppCompatActivity() {
     private val foundBytes = AtomicLong(0)
     private val handler = Handler(Looper.getMainLooper())
     private var lastPathUpdate = 0L
+    private var androidDataCacheCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,6 +122,7 @@ class CleanActivity : AppCompatActivity() {
                 }
             )
             scanner.scan()
+            androidDataCacheCount = scanner.androidDataCacheCount
             val all = ArrayList<ScanItem>()
             all.addAll(scanner.items)
             all.addAll(scanner.apkItems)
@@ -135,6 +138,13 @@ class CleanActivity : AppCompatActivity() {
     }
 
     private fun onScanDone(all: List<ScanItem>) {
+        val shizukuNote = if (com.clean.cleaner.util.Settings.shizukuAccess(this)) {
+            if (ShizukuShell.available()) "Android/data 缓存已扫描：$androidDataCacheCount 项"
+            else "Shizuku 未就绪：Android/data 未扫描"
+        } else null
+        if (shizukuNote != null) {
+            Toast.makeText(this, shizukuNote, Toast.LENGTH_LONG).show()
+        }
         if (all.isEmpty()) {
             tvScanState.text = "扫描完成"
             tvScanFound.text = "未发现可清理的垃圾 ✨"
