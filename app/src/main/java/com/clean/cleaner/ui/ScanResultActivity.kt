@@ -205,9 +205,11 @@ class ScanResultActivity : AppCompatActivity() {
         val out = LargeFileScanner(minSize = minSize, onProgress = ::throttlePath).scan().toMutableList()
         if (ShizukuShell.available()) {
             for (e in ShizukuShell.listAndroidDataLarge(minSize)) {
+                val cat = StorageHelper.categoryOf(e.path.substringAfterLast('/'))
                 out.add(
                     ScanItem(e.path, e.path.substringAfterLast('/'), e.size,
-                        kind = "large", groupKey = "large", groupLabel = "大文件",
+                        kind = if (cat == "other") "large" else cat,
+                        groupKey = "large", groupLabel = "大文件",
                         extra = SizeUtils.format(e.size))
                 )
             }

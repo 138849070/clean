@@ -1,17 +1,24 @@
 package com.clean.cleaner.ui
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Handler
+import android.os.Looper
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.clean.cleaner.R
 import com.clean.cleaner.scan.ScanItem
 import com.clean.cleaner.util.SizeUtils
+import java.util.concurrent.Executors
 
 /**
- * 通用扫描结果列表：分组标题 + 可勾选项
+ * 通用扫描结果列表：分组标题 + 可勾选项（图片/视频文件显示缩略图预览）
  */
 class ScanResultAdapter(
     private val items: MutableList<ScanItem>,
@@ -21,6 +28,13 @@ class ScanResultAdapter(
     companion object {
         private const val TYPE_HEADER = 0
         private const val TYPE_ITEM = 1
+        private val imageExts = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
+    }
+
+    private val thumbExecutor = Executors.newSingleThreadExecutor()
+    private val thumbHandler = Handler(Looper.getMainLooper())
+    private val thumbCache = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
 
     private sealed class Row {
@@ -111,9 +125,7 @@ class ScanResultAdapter(
                 h.tvName.text = item.name
                 h.tvPath.text = item.extra.ifEmpty { item.path }
                 h.tvSize.text = SizeUtils.format(item.size)
-                val (icon, color) = kindStyle(item.kind)
-                h.tvIcon.text = icon
-                h.tvIcon.setBackgroundColor(color)
+                bindIcon(h, item)
                 h.itemView.setOnClickListener {
                     if (onBeforeClick?.invoke(item) == true) return@setOnClickListener
                     val path = item.path
@@ -143,9 +155,56 @@ class ScanResultAdapter(
     private class ItemHolder(v: View) : RecyclerView.ViewHolder(v) {
         val check: CheckBox = v.findViewById(R.id.check)
         val tvIcon: TextView = v.findViewById(R.id.tvIcon)
+        val ivThumb: ImageView = v.findViewById(R.id.ivThumb)
         val tvName: TextView = v.findViewById(R.id.tvName)
         val tvPath: TextView = v.findViewById(R.id.tvPath)
         val tvSize: TextView = v.findViewById(R.id.tvSize)
+    }
+
+    /** 绑定图标：图片文件加载缩略图预览，其余显示类型文字图标 */
+    private fun bindIcon(h: ItemHolder, item: ScanItem) {
+        h.ivThumb.visibility = View.GONE
+        val (icon, color) = kindStyle(item.kind)
+        h.tvIcon.text = icon
+        h.tvIcon.setBackgroundColor(color)
+        h.tvIcon.visibility = View.VISIBLE
+
+        if (item.isDir) return
+        val ext = item.path.substringAfterLast('.', "").lowercase()
+        if (ext !in imageExts) return
+        val tag = item.path
+        h.ivThumb.setTag(tag)
+        thumbCache.get(tag)?.let { bmp ->
+            h.ivThumb.setImageBitmap(bmp)
+            h.ivThumb.visibility = View.VISIBLE
+            h.tvIcon.visibility = View.GONE
+            return
+        }
+        thumbExecutor.execute {
+            val bmp = decodeThumb(tag)
+            if (bmp != null) {
+                thumbCache.put(tag, bmp)
+                thumbHandler.post {
+                    if (h.ivThumb.getTag() == tag) {
+                        h.ivThumb.setImageBitmap(bmp)
+                        h.ivThumb.visibility = View.VISIBLE
+                        h.tvIcon.visibility = View.GONE
+                    }
+                }
+            }
+        }
+    }
+
+    private fun decodeThumb(path: String): Bitmap? {
+        return try {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, opts)
+            var sample = 1
+            while (opts.outWidth / sample > 220 || opts.outHeight / sample > 220) sample *= 2
+            BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+        } catch (e: Throwable) {
+            null
+        }
     }
 
     private fun kindStyle(kind: String): Pair<String, Int> = when (kind) {
@@ -153,9 +212,13 @@ class ScanResultAdapter(
         "log" -> "日" to 0xFF8A8F8D.toInt()
         "tmp" -> "临" to 0xFFFF9500.toInt()
         "thumb" -> "缩" to 0xFF0A84FF.toInt()
-        "apk" -> "包" to 0xFFFF3B30.toInt()
+        "apk" -> "APK" to 0xFFFF3B30.toInt()
         "empty" -> "空" to 0xFF8A8F8D.toInt()
         "residue" -> "残" to 0xFFFF9500.toInt()
+        "suspect" -> "疑" to 0xFFAF52DE.toInt()
+        "large" -> "大" to 0xFFFF3B30.toInt()
+        "dup" -> "重" to 0xFFFF9500.toInt()
+        "sim" -> "似" to 0xFF0A84FF.toInt()
         "img" -> "图" to 0xFF0A84FF.toInt()
         "video" -> "视" to 0xFFAF52DE.toInt()
         "audio" -> "音" to 0xFFFF9500.toInt()

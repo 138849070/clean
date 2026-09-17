@@ -19,9 +19,10 @@ class LargeFileScanner(
             if (!f.isDirectory) {
                 val size = f.length()
                 if (size >= minSize) {
+                    val cat = StorageHelper.categoryOf(f.name)
                     files.add(
                         ScanItem(f.absolutePath, f.name, size,
-                            kind = "other",
+                            kind = if (cat == "other") "large" else cat,
                             groupKey = "large",
                             groupLabel = "大文件",
                             extra = SizeUtils.format(size))
