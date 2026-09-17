@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Clean" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/text_main</item>
+        <item name="colorPrimaryContainer">#1F3D33</item>
+        <item name="colorOnPrimaryContainer">#B8F5DE</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="android:colorBackground">#121514</item>
+        <item name="colorSurface">#1C201E</item>
+        <item name="android:statusBarColor">#121514</item>
+        <item name="android:navigationBarColor">#121514</item>
+    </style>
+</resources>

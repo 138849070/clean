@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <!-- 标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="6dp"
+        android:paddingEnd="16dp">
+
+        <TextView
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:textSize="24sp"
+            android:textColor="@color/text_main"
+            android:text="‹" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_main"
+            android:text="垃圾清理" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- 结果列表 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/resultList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:clipToPadding="false"
+            android:visibility="gone" />
+
+        <!-- 扫描动画覆盖层 -->
+        <LinearLayout
+            android:id="@+id/scanOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <com.clean.cleaner.ui.RadarView
+                android:id="@+id/radarView"
+                android:layout_width="200dp"
+                android:layout_height="200dp" />
+
+            <TextView
+                android:id="@+id/tvScanState"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:textSize="15sp"
+                android:textColor="@color/text_main"
+                android:textStyle="bold"
+                android:text="正在扫描…" />
+
+            <TextView
+                android:id="@+id/tvScanFound"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:text="已发现 0 B" />
+
+            <TextView
+                android:id="@+id/tvScanPath"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:maxWidth="280dp"
+                android:ellipsize="middle"
+                android:singleLine="true"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:text="" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- 底部清理栏 -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/card"
+        android:elevation="8dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:visibility="gone">
+
+        <CheckBox
+            android:id="@+id/checkAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="全选" />
+
+        <TextView
+            android:id="@+id/tvSelected"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:text="已选 0 项 · 0 B" />
+
+        <Button
+            android:id="@+id/btnClean"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_primary_btn"
+            android:text="一键清理"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:stateListAnimator="@null"
+            android:paddingStart="26dp"
+            android:paddingEnd="26dp" />
+    </LinearLayout>
+</LinearLayout>

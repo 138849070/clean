@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Clean" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/primary_light</item>
+        <item name="colorOnPrimaryContainer">@color/primary_dark</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="colorSurface">@color/card</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+    </style>
+
+    <style name="TextTitle" parent="">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/text_main</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextBody" parent="">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="TextSection" parent="">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/text_main</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>
