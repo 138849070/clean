@@ -24,6 +24,8 @@
     <!-- Shizuku：跨用户交互（ShizukuProvider 需要） -->
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL"
         tools:ignore="ProtectedPermissions" />
+    <!-- Shizuku 授权（API_V23 权限声明，缺少则不会弹出授权框） -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <application
         android:name=".App"

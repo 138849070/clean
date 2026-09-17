@@ -50,6 +50,39 @@ class JunkScanner(
         }
         // 空文件夹（独立小遍历，只找无任何子项的目录）
         findEmptyDirs(root)
+        // Shizuku：Android/data 下各应用的缓存目录（File API 读不到）
+        if (ShizukuShell.available()) scanAndroidDataCaches()
+    }
+
+    /** 通过 Shizuku 扫描 Android/data 下各应用的 cache/code_cache 目录 */
+    private fun scanAndroidDataCaches() {
+        val script =
+            "find /storage/emulated/0/Android/data -type d \\( -name cache -o -name code_cache \\) 2>/dev/null | " +
+                "while read d; do du -sk \"\$d\" 2>/dev/null; done"
+        val out = ShizukuShell.exec(script) ?: return
+        for (line in out.lineSequence()) {
+            if (Thread.currentThread().isInterrupted) return
+            val parts = line.trim().split(Regex("\\s+"), limit = 2)
+            if (parts.size != 2) continue
+            val kb = parts[0].toLongOrNull() ?: continue
+            val path = parts[1]
+            val size = kb * 1024
+            val name = path.substringAfterLast('/')
+            val pkg = path.removePrefix("/storage/emulated/0/Android/data/").substringBefore('/')
+            items.add(
+                ScanItem(
+                    path = path,
+                    name = name,
+                    size = size,
+                    isDir = true,
+                    groupKey = "cache",
+                    groupLabel = "缓存垃圾",
+                    kind = "cache",
+                    extra = "$pkg · ${SizeUtils.format(size)}"
+                )
+            )
+            onFound(size)
+        }
     }
 
     private fun scanDir(dir: File, inJunk: String?) {
