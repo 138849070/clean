@@ -29,6 +29,10 @@ class ScanResultAdapter(
         private const val TYPE_HEADER = 0
         private const val TYPE_ITEM = 1
         private val imageExts = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
+        private val videoExts = setOf(
+            "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm",
+            "3gp", "m4v", "ts", "m2ts", "rmvb", "rm", "f4v"
+        )
     }
 
     private val thumbExecutor = Executors.newSingleThreadExecutor()
@@ -171,7 +175,7 @@ class ScanResultAdapter(
 
         if (item.isDir) return
         val ext = item.path.substringAfterLast('.', "").lowercase()
-        if (ext !in imageExts) return
+        if (ext !in imageExts && ext !in videoExts) return
         val tag = item.path
         h.ivThumb.setTag(tag)
         thumbCache.get(tag)?.let { bmp ->
@@ -181,7 +185,7 @@ class ScanResultAdapter(
             return
         }
         thumbExecutor.execute {
-            val bmp = decodeThumb(tag)
+            val bmp = if (ext in videoExts) decodeVideoThumb(tag) else decodeThumb(tag)
             if (bmp != null) {
                 thumbCache.put(tag, bmp)
                 thumbHandler.post {
@@ -205,6 +209,29 @@ class ScanResultAdapter(
         } catch (e: Throwable) {
             null
         }
+    }
+
+    /** 视频缩略图：抽取首帧并缩放到预览尺寸 */
+    private fun decodeVideoThumb(path: String): Bitmap? {
+        return try {
+            val retriever = android.media.MediaMetadataRetriever()
+            retriever.setDataSource(path)
+            val frame = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            retriever.release()
+            frame?.let { scaleDown(it) }
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    private fun scaleDown(bmp: Bitmap): Bitmap {
+        val w = bmp.width
+        val h = bmp.height
+        if (w <= 440 && h <= 440) return bmp
+        val ratio = minOf(440f / w, 440f / h)
+        val scaled = Bitmap.createScaledBitmap(bmp, (w * ratio).toInt().coerceAtLeast(1), (h * ratio).toInt().coerceAtLeast(1), true)
+        if (scaled != bmp) bmp.recycle()
+        return scaled
     }
 
     private fun kindStyle(kind: String): Pair<String, Int> = when (kind) {
