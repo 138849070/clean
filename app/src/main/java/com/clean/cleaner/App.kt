@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Environment
 import android.widget.Toast
+import com.clean.cleaner.scan.MainScanResult
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -18,6 +19,9 @@ class App : Application() {
 
         /** 本次打开 App 后累计清理的字节数 */
         var sessionCleaned: Long = 0L
+
+        /** 主界面最近一次一键扫描结果（内存缓存，供页面恢复时展示） */
+        var lastScan: MainScanResult? = null
 
         fun addCleaned(bytes: Long) {
             if (bytes <= 0) return
