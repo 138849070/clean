@@ -19,7 +19,11 @@ class JunkScanner(
 
     private val junkDirNames = setOf(
         "cache", "caches", ".cache", "tmp", "temp",
-        "logs", "log", "thumbs", "thumbnails", ".thumbnails"
+        "logs", "log", "thumbs", "thumbnails", ".thumbnails",
+        // 应用自定义缓存目录（扩展规则，对齐主流应用行为）
+        "imagecache", "imageloader", "webcache", "webviewcache",
+        "videocache", "video_cache", "netcache", "network_cache",
+        "downloadcache", "download_cache", "adcache", "banner", "splash"
     )
     private val junkFileExts = setOf("tmp", "temp", "log", "bak", "old", "cache", "thumb", "thumbnail", "part", "apkcache")
     private val apkExt = "apk"
@@ -54,34 +58,25 @@ class JunkScanner(
         if (ShizukuShell.available()) scanAndroidDataCaches()
     }
 
-    /** 通过 Shizuku 扫描 Android/data 下各应用的 cache/code_cache 目录 */
+    /** 通过 Shizuku 扫描 Android/data 下各应用的缓存目录（含自定义缓存目录） */
     private fun scanAndroidDataCaches() {
-        val script =
-            "find /storage/emulated/0/Android/data -type d \\( -name cache -o -name code_cache \\) 2>/dev/null | " +
-                "while read d; do du -sk \"\$d\" 2>/dev/null; done"
-        val out = ShizukuShell.exec(script) ?: return
-        for (line in out.lineSequence()) {
+        val caches = ShizukuShell.listAndroidDataCaches()
+        for (entry in caches) {
             if (Thread.currentThread().isInterrupted) return
-            val parts = line.trim().split(Regex("\\s+"), limit = 2)
-            if (parts.size != 2) continue
-            val kb = parts[0].toLongOrNull() ?: continue
-            val path = parts[1]
-            val size = kb * 1024
-            val name = path.substringAfterLast('/')
-            val pkg = path.removePrefix("/storage/emulated/0/Android/data/").substringBefore('/')
+            val name = entry.path.substringAfterLast('/')
             items.add(
                 ScanItem(
-                    path = path,
+                    path = entry.path,
                     name = name,
-                    size = size,
+                    size = entry.size,
                     isDir = true,
                     groupKey = "cache",
                     groupLabel = "缓存垃圾",
                     kind = "cache",
-                    extra = "$pkg · ${SizeUtils.format(size)}"
+                    extra = "${entry.pkg} · ${SizeUtils.format(entry.size)}"
                 )
             )
-            onFound(size)
+            onFound(entry.size)
         }
     }
 

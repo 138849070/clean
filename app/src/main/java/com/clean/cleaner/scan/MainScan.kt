@@ -47,7 +47,11 @@ class MainScan(
 
     private val junkDirNames = setOf(
         "cache", "caches", ".cache", "tmp", "temp",
-        "logs", "log", "thumbs", "thumbnails", ".thumbnails"
+        "logs", "log", "thumbs", "thumbnails", ".thumbnails",
+        // 应用自定义缓存目录（与清理页规则一致）
+        "imagecache", "imageloader", "webcache", "webviewcache",
+        "videocache", "video_cache", "netcache", "network_cache",
+        "downloadcache", "download_cache", "adcache", "banner", "splash"
     )
     private val junkFileExts = setOf(
         "tmp", "temp", "log", "bak", "old", "cache", "thumb", "thumbnail", "part", "apkcache"
