@@ -185,7 +185,12 @@ class ScanResultAdapter(
             return
         }
         thumbExecutor.execute {
-            val bmp = if (ext in videoExts) decodeVideoThumb(tag) else decodeThumb(tag)
+            val ctx = h.itemView.context
+            val bmp = when {
+                ext in imageExts -> decodeThumb(tag)
+                ext in videoExts -> decodeVideoThumb(tag) ?: decodeVideoThumbViaShizuku(tag, ctx)
+                else -> null
+            }
             if (bmp != null) {
                 thumbCache.put(tag, bmp)
                 thumbHandler.post {
@@ -211,14 +216,47 @@ class ScanResultAdapter(
         }
     }
 
-    /** 视频缩略图：抽取首帧并缩放到预览尺寸 */
+    /** 视频缩略图：抽取画面帧并缩放到预览尺寸（1 秒处优先，失败回退首帧） */
     private fun decodeVideoThumb(path: String): Bitmap? {
         return try {
             val retriever = android.media.MediaMetadataRetriever()
             retriever.setDataSource(path)
-            val frame = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-            retriever.release()
+            val frame = try {
+                retriever.getFrameAtTime(1_000_000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    ?: retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+            } finally {
+                retriever.release()
+            }
             frame?.let { scaleDown(it) }
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    /** 受限目录（Android/data）视频：Shizuku 复制到本应用目录后抽帧，再删除临时文件 */
+    private fun decodeVideoThumbViaShizuku(path: String, ctx: android.content.Context): Bitmap? {
+        return try {
+            if (!com.clean.cleaner.scan.ShizukuShell.available()) return null
+            val src = java.io.File(path)
+            if (!src.isFile || src.length() > 400L * 1024 * 1024) return null
+            val tmp = java.io.File(ctx.getExternalFilesDir(null), "vthumb_${System.nanoTime()}.mp4")
+            tmp.parentFile?.mkdirs()
+            val out = com.clean.cleaner.scan.ShizukuShell.exec("cp \"$path\" \"${tmp.absolutePath}\" 2>/dev/null; echo DONE")
+            if (out?.contains("DONE") == true && tmp.exists() && tmp.length() > 0) {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(tmp.absolutePath)
+                val frame = try {
+                    retriever.getFrameAtTime(1_000_000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                        ?: retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                } finally {
+                    retriever.release()
+                }
+                tmp.delete()
+                frame?.let { scaleDown(it) }
+            } else {
+                tmp.delete()
+                null
+            }
         } catch (e: Throwable) {
             null
         }
