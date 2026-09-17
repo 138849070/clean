@@ -377,14 +377,15 @@ class MainActivity : AppCompatActivity() {
         val baseSize = if (r.mediaSize > r.totalSize) r.mediaSize else r.totalSize
         val sizeTotal = baseSize + r.dataSize
         tvStatTotal.text = SizeUtils.compact(sizeTotal)
-        tvStatFolders.text = "${r.folderCount}个"
+        tvStatFolders.text = "${r.folderCount + r.dataFolders}个"
         tvStatFiles.text = "${fileTotal}个"
 
         tag(r, "junk")?.text = "大于${SizeUtils.compact(r.junkSize + r.dataCache)}"
-        tag(r, "empty")?.text = "${r.emptyCount}个"
-        tag(r, "residue")?.text = "${r.residueCount}个(${SizeUtils.compact(r.residueSize)})"
-        tag(r, "apk")?.text = "${r.apkCount}个(${SizeUtils.compact(r.apkSize)})"
-        tag(r, "large")?.text = "${r.largeCount}个(${SizeUtils.compact(r.largeSize)})"
+        tag(r, "empty")?.text = "${r.emptyCount + r.dataEmptyCount}个"
+        // 疑似缓存：Android/data 下非精确 cache 名的关键词缓存目录
+        tag(r, "residue")?.text = "${r.dataSuspectCount}个(${SizeUtils.compact(r.dataSuspectSize)})"
+        tag(r, "apk")?.text = "${r.apkCount + r.dataApkCount}个(${SizeUtils.compact(r.apkSize + r.dataApkSize)})"
+        tag(r, "large")?.text = "${r.largeCount + r.dataLargeCount}个(${SizeUtils.compact(r.largeSize + r.dataLargeSize)})"
         // 无统计标签的入口保持隐藏
         listOf("note", "periodic", "toolbox", "recent", "oldest", "dup", "rate").forEach {
             tagViews[it]?.visibility = View.GONE

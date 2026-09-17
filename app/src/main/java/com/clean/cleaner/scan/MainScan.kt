@@ -33,7 +33,15 @@ data class MainScanResult(
     /** Shizuku：Android/data 受限目录全量统计 */
     val dataFiles: Long = 0,
     val dataSize: Long = 0,
-    val dataCache: Long = 0
+    val dataCache: Long = 0,
+    val dataFolders: Long = 0,
+    val dataApkCount: Long = 0,
+    val dataApkSize: Long = 0,
+    val dataLargeCount: Long = 0,
+    val dataLargeSize: Long = 0,
+    val dataEmptyCount: Long = 0,
+    val dataSuspectCount: Long = 0,
+    val dataSuspectSize: Long = 0
 )
 
 /** 主界面全局扫描：MediaStore 全量统计 + 一次文件遍历统计明细 */
@@ -96,12 +104,28 @@ class MainScan(
         var dataFiles = 0L
         var dataSize = 0L
         var dataCache = 0L
+        var dataFolders = 0L
+        var dataApkCount = 0L
+        var dataApkSize = 0L
+        var dataLargeCount = 0L
+        var dataLargeSize = 0L
+        var dataEmptyCount = 0L
+        var dataSuspectCount = 0L
+        var dataSuspectSize = 0L
         if (Settings.shizukuAccess(context) && ShizukuShell.available()) {
             try {
-                ShizukuShell.scanAndroidData()?.let {
+                ShizukuShell.scanAndroidDataFull()?.let {
                     dataFiles = it.fileCount
+                    dataFolders = it.folderCount
                     dataSize = it.totalSize
+                    dataApkCount = it.apkCount
+                    dataApkSize = it.apkSize
+                    dataLargeCount = it.largeCount
+                    dataLargeSize = it.largeSize
+                    dataEmptyCount = it.emptyCount
                     dataCache = it.cacheSize
+                    dataSuspectCount = it.suspectCount
+                    dataSuspectSize = it.suspectSize
                 }
             } catch (ignored: Exception) {
             }
@@ -133,7 +157,11 @@ class MainScan(
             mediaFiles = media.fileCount, mediaSize = media.totalSize,
             mediaImage = media.imageCount, mediaVideo = media.videoCount,
             mediaAudio = media.audioCount, mediaDoc = media.docCount,
-            dataFiles = dataFiles, dataSize = dataSize, dataCache = dataCache
+            dataFiles = dataFiles, dataSize = dataSize, dataCache = dataCache,
+            dataFolders = dataFolders, dataApkCount = dataApkCount, dataApkSize = dataApkSize,
+            dataLargeCount = dataLargeCount, dataLargeSize = dataLargeSize,
+            dataEmptyCount = dataEmptyCount,
+            dataSuspectCount = dataSuspectCount, dataSuspectSize = dataSuspectSize
         )
     }
 

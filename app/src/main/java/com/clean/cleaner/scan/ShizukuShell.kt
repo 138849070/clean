@@ -102,22 +102,63 @@ object ShizukuShell {
         return result
     }
 
-    fun scanAndroidData(): DataStats? {
+    /** Android/data 全量统计（含 obb） */
+    data class DataStatsFull(
+        val fileCount: Long,
+        val folderCount: Long,
+        val totalSize: Long,
+        val apkCount: Long,
+        val apkSize: Long,
+        val largeCount: Long,
+        val largeSize: Long,
+        val emptyCount: Long,
+        /** 全部缓存关键词目录（缓存垃圾） */
+        val cacheSize: Long,
+        val cacheCount: Long,
+        /** 非精确 cache 名的关键词缓存（疑似缓存） */
+        val suspectSize: Long,
+        val suspectCount: Long
+    )
+
+    /**
+     * Shizuku 全量统计 Android/data（含 Android/obb）：
+     * 文件数/文件夹数/总大小/安装包/大文件(>20MB)/空文件夹。
+     * 缓存部分由 listAndroidDataCaches 分类补充。
+     */
+    fun scanAndroidDataFull(): DataStatsFull? {
         if (!available()) return null
         val dataRoot = "/storage/emulated/0/Android/data"
         val obbRoot = "/storage/emulated/0/Android/obb"
-        // 注意：Android toybox 的 du 不支持 -b，用 -sk 输出 KB 再换算字节
         val script =
             "find $dataRoot $obbRoot -type f 2>/dev/null | wc -l;" +
-                "du -sk $dataRoot $obbRoot 2>/dev/null | awk '{s+=\$1} END {print s*1024}'"
+                "find $dataRoot $obbRoot -type d 2>/dev/null | wc -l;" +
+                "du -sk $dataRoot $obbRoot 2>/dev/null | awk 'BEGIN{s=0}{s+=\$1}END{print s*1024}';" +
+                "find $dataRoot $obbRoot -type f -iname \"*.apk\" 2>/dev/null | wc -l;" +
+                "find $dataRoot $obbRoot -type f -iname \"*.apk\" -exec du -sk {} + 2>/dev/null | awk 'BEGIN{s=0}{s+=\$1}END{print s*1024}';" +
+                "find $dataRoot $obbRoot -type f -size +20480k 2>/dev/null | wc -l;" +
+                "find $dataRoot $obbRoot -type f -size +20480k -exec du -sk {} + 2>/dev/null | awk 'BEGIN{s=0}{s+=\$1}END{print s*1024}';" +
+                "find $dataRoot $obbRoot -type d -empty 2>/dev/null | wc -l"
         val out = exec(script) ?: return null
-        val lines = out.trim().split("\n")
-        if (lines.size < 2) return null
-        val cacheSize = listAndroidDataCaches().sumOf { it.size }
-        return DataStats(
-            fileCount = lines[0].trim().toLongOrNull() ?: 0L,
-            totalSize = lines[1].trim().toLongOrNull() ?: 0L,
-            cacheSize = cacheSize
+        val lines = out.trim().split("\n").map { it.trim().toLongOrNull() ?: 0L }
+        if (lines.size < 8) return null
+        // 缓存分类：精确 cache 名 vs 其他关键词（疑似）
+        val caches = listAndroidDataCaches()
+        val exactNames = setOf("cache", "caches", ".cache", "code_cache")
+        val exact = caches.filter { exactNames.contains(it.path.substringAfterLast('/').lowercase()) }
+        val suspect = caches.filterNot { exactNames.contains(it.path.substringAfterLast('/').lowercase()) }
+        return DataStatsFull(
+            fileCount = lines[0],
+            folderCount = lines[1],
+            totalSize = lines[2],
+            apkCount = lines[3],
+            apkSize = lines[4],
+            largeCount = lines[5],
+            largeSize = lines[6],
+            emptyCount = lines[7],
+            cacheSize = exact.sumOf { it.size },
+            cacheCount = exact.size.toLong(),
+            suspectSize = suspect.sumOf { it.size },
+            suspectCount = suspect.size.toLong()
         )
     }
 }
