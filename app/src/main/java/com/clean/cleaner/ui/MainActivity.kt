@@ -10,6 +10,7 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.clean.cleaner.App
@@ -37,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var grid: LinearLayout
 
     private var hasCheckedPermission = false
+    private var hasShownPeriodic = false
     private var scanThread: Thread? = null
     private val handler = Handler(Looper.getMainLooper())
 
@@ -46,21 +48,18 @@ class MainActivity : AppCompatActivity() {
     private data class GridItem(val name: String, val emoji: String, val type: String, val tag: String? = null)
 
     private val gridItems = listOf(
-        GridItem("缓存垃圾", "🧹", "junk", "待扫描"),
-        GridItem("微信清理", "💬", "deep"),
-        GridItem("大文件", "🗜️", "large", "待扫描"),
-        GridItem("重复文件", "📑", "dup", "待扫描"),
-        GridItem("相似图片", "🖼️", "sim"),
-        GridItem("安装包", "📦", "apk", "待扫描"),
-        GridItem("卸载残留", "🗑️", "residue"),
-        GridItem("空文件夹", "📁", "empty", "待扫描"),
+        GridItem("备注文件", "📝", "note"),
+        GridItem("定期清理", "🔄", "periodic"),
+        GridItem("工具箱", "🧰", "toolbox"),
         GridItem("最新文件", "🕒", "recent"),
         GridItem("最旧文件", "⏳", "oldest"),
-        GridItem("应用管理", "📱", "apps"),
-        GridItem("文件管理", "🗂️", "files"),
-        GridItem("空白文件", "📄", "emptyfile"),
-        GridItem("秒搜文件", "🔍", "search"),
-        GridItem("工具箱", "🧰", "toolbox")
+        GridItem("重复文件", "📑", "dup"),
+        GridItem("空文件夹", "📁", "empty", "待扫描"),
+        GridItem("缓存垃圾", "🧹", "junk", "待扫描"),
+        GridItem("疑似缓存", "🗑️", "residue", "待扫描"),
+        GridItem("安装包", "📦", "apk", "待扫描"),
+        GridItem("大文件", "🗜️", "large", "待扫描"),
+        GridItem("五星好评", "⭐", "rate")
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,6 +95,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<View>(R.id.btnMore).setOnClickListener { showMoreMenu(it) }
 
         buildGrid()
         refreshHeader()
@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
         if (App.lastScan == null && Settings.autoScan(this) && PermissionActivity.hasStorageAccess()) {
             startScan()
         }
+        checkPeriodicClean()
     }
 
     override fun onDestroy() {
@@ -183,14 +184,82 @@ class MainActivity : AppCompatActivity() {
 
     private fun openFeature(type: String) {
         val intent = when (type) {
+            "note" -> Intent(this, NoteActivity::class.java)
+            "periodic" -> Intent(this, SettingsActivity::class.java)
+            "toolbox" -> Intent(this, ToolboxActivity::class.java)
             "junk" -> Intent(this, CleanActivity::class.java)
             "apps" -> Intent(this, AppManagerActivity::class.java)
             "files" -> Intent(this, FileBrowserActivity::class.java)
             "search" -> Intent(this, SearchActivity::class.java)
-            "toolbox" -> Intent(this, ToolboxActivity::class.java)
+            "rate" -> null
             else -> Intent(this, ScanResultActivity::class.java).putExtra("type", type)
         }
-        startActivity(intent)
+        if (intent != null) startActivity(intent)
+        else if (type == "rate") showRate()
+    }
+
+    private fun showMoreMenu(anchor: View) {
+        val menu = PopupMenu(this, anchor)
+        menu.menu.add("相似图片").setOnMenuItemClickListener {
+            openFeature("sim"); true
+        }
+        menu.menu.add("空白文件").setOnMenuItemClickListener {
+            openFeature("emptyfile"); true
+        }
+        menu.menu.add("应用管理").setOnMenuItemClickListener {
+            openFeature("apps"); true
+        }
+        menu.menu.add("文件管理").setOnMenuItemClickListener {
+            openFeature("files"); true
+        }
+        menu.menu.add("秒搜文件").setOnMenuItemClickListener {
+            openFeature("search"); true
+        }
+        menu.menu.add("关于").setOnMenuItemClickListener {
+            showAbout(); true
+        }
+        menu.show()
+    }
+
+    private fun showRate() {
+        AlertDialog.Builder(this)
+            .setTitle("五星好评")
+            .setMessage("如果 Clean 清理帮到了你，可以去 GitHub 点个 Star 支持一下。")
+            .setPositiveButton("打开 GitHub") { _, _ ->
+                try {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/138849070/clean")
+                        )
+                    )
+                } catch (ignored: Exception) {
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /** 定期清理提醒：超过设置周期后提示 */
+    private fun checkPeriodicClean() {
+        if (hasShownPeriodic) return
+        if (!Settings.periodicClean(this)) return
+        val last = App.lastCleanTime()
+        if (last <= 0) return
+        val days = Settings.periodicDays(this).toLong()
+        val elapsed = System.currentTimeMillis() - last
+        if (elapsed >= days * 86400000L) {
+            hasShownPeriodic = true
+            val d = (elapsed / 86400000L).toInt()
+            AlertDialog.Builder(this)
+                .setTitle("定期清理提醒")
+                .setMessage("距上次清理已超过 $d 天，是否现在清理？")
+                .setPositiveButton("去清理") { _, _ ->
+                    startActivity(Intent(this, CleanActivity::class.java))
+                }
+                .setNegativeButton("稍后", null)
+                .show()
+        }
     }
 
     /** 开始一键扫描：统计主界面所有入口的规模 */
@@ -248,19 +317,13 @@ class MainActivity : AppCompatActivity() {
         tvStatFolders.text = "${r.folderCount}个"
         tvStatFiles.text = "${r.fileCount}个"
 
-        tag(r, "junk")?.text = SizeUtils.compact(r.junkSize)
-        tag(r, "deep")?.text = SizeUtils.compact(r.deepSize)
-        tag(r, "large")?.text = "${r.largeCount}个(${SizeUtils.compact(r.largeSize)})"
-        tag(r, "dup")?.text = "${r.dupCount}个(${SizeUtils.compact(r.dupSize)})"
-        tag(r, "sim")?.text = "${r.simCount}个(${SizeUtils.compact(r.simSize)})"
-        tag(r, "apk")?.text = "${r.apkCount}个(${SizeUtils.compact(r.apkSize)})"
-        tag(r, "residue")?.text = "${r.residueCount}个(${SizeUtils.compact(r.residueSize)})"
+        tag(r, "junk")?.text = "大于${SizeUtils.compact(r.junkSize)}"
         tag(r, "empty")?.text = "${r.emptyCount}个"
-        if (Settings.emptyFiles(this)) {
-            tag(r, "emptyfile")?.text = "${r.emptyFileCount}个"
-        }
-        // 最新/最旧/应用管理/文件管理/搜索/工具箱：无统计，保持隐藏
-        listOf("recent", "oldest", "apps", "files", "search", "toolbox").forEach {
+        tag(r, "residue")?.text = "${r.residueCount}个(${SizeUtils.compact(r.residueSize)})"
+        tag(r, "apk")?.text = "${r.apkCount}个(${SizeUtils.compact(r.apkSize)})"
+        tag(r, "large")?.text = "${r.largeCount}个(${SizeUtils.compact(r.largeSize)})"
+        // 无统计标签的入口保持隐藏
+        listOf("note", "periodic", "toolbox", "recent", "oldest", "dup", "rate").forEach {
             tagViews[it]?.visibility = View.GONE
         }
     }
@@ -291,7 +354,7 @@ class MainActivity : AppCompatActivity() {
     private fun showAbout() {
         AlertDialog.Builder(this)
             .setTitle("Clean 清理")
-            .setMessage("版本 1.2.0\n\n免费安卓存储清理工具，无会员、无广告、无网络请求。\n\n清理功能均在本机完成，不会上传任何数据。")
+            .setMessage("版本 1.4.0\n\n免费安卓存储清理工具，无会员、无广告、无网络请求。\n\n清理功能均在本机完成，不会上传任何数据。")
             .setPositiveButton("好的", null)
             .show()
     }

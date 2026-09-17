@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="文件路径"
+        android:textSize="13sp"
+        android:textColor="@color/text_secondary" />
+
+    <EditText
+        android:id="@+id/etPath"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:inputType="text"
+        android:background="@drawable/bg_edit"
+        android:padding="10dp"
+        android:textSize="13sp"
+        android:hint="例如：/storage/emulated/0/Download/重要资料" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="备注内容"
+        android:textSize="13sp"
+        android:textColor="@color/text_secondary" />
+
+    <EditText
+        android:id="@+id/etText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:inputType="text"
+        android:background="@drawable/bg_edit"
+        android:padding="10dp"
+        android:textSize="13sp"
+        android:hint="备注文字（可留空）" />
+
+    <CheckBox
+        android:id="@+id/cbProtect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="标记为「不要清理」，清理时自动跳过"
+        android:textSize="13sp"
+        android:textColor="@color/primary" />
+</LinearLayout>

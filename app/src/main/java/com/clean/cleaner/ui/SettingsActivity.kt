@@ -27,8 +27,10 @@ class SettingsActivity : AppCompatActivity() {
         val swDarkFollow = findViewById<Switch>(R.id.swDarkFollow)
         val swKeepScreen = findViewById<Switch>(R.id.swKeepScreen)
         val swShowCleaned = findViewById<Switch>(R.id.swShowCleaned)
+        val swPeriodic = findViewById<Switch>(R.id.swPeriodic)
         val etLargeMin = findViewById<EditText>(R.id.etLargeMin)
         val etExclude = findViewById<EditText>(R.id.etExclude)
+        val etPeriodicDays = findViewById<EditText>(R.id.etPeriodicDays)
 
         swAutoScan.isChecked = Settings.autoScan(this)
         swAutoClean.isChecked = Settings.autoClean(this)
@@ -36,14 +38,27 @@ class SettingsActivity : AppCompatActivity() {
         swDarkFollow.isChecked = Settings.darkFollow(this)
         swKeepScreen.isChecked = Settings.keepScreen(this)
         swShowCleaned.isChecked = Settings.showCleaned(this)
+        swPeriodic.isChecked = Settings.periodicClean(this)
         etLargeMin.setText(Settings.largeMinMb(this).toString())
         etExclude.setText(Settings.excludeRaw(this))
+        etPeriodicDays.setText(Settings.periodicDays(this).toString())
 
         swAutoScan.setOnCheckedChangeListener { _, v -> Settings.setAutoScan(this, v) }
         swAutoClean.setOnCheckedChangeListener { _, v -> Settings.setAutoClean(this, v) }
         swEmptyFiles.setOnCheckedChangeListener { _, v -> Settings.setEmptyFiles(this, v) }
         swKeepScreen.setOnCheckedChangeListener { _, v -> Settings.setKeepScreen(this, v) }
         swShowCleaned.setOnCheckedChangeListener { _, v -> Settings.setShowCleaned(this, v) }
+        swPeriodic.setOnCheckedChangeListener { _, v ->
+            Settings.setPeriodicClean(this, v)
+            if (v) Toast.makeText(this, "定期清理已开启", Toast.LENGTH_SHORT).show()
+        }
+        etPeriodicDays.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                etPeriodicDays.text.toString().toIntOrNull()?.let {
+                    Settings.setPeriodicDays(this, it)
+                }
+            }
+        }
 
         // 深色模式：开=跟随系统，关=强制深色
         swDarkFollow.setOnCheckedChangeListener { _, v ->

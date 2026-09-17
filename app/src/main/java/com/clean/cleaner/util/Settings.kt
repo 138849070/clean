@@ -60,4 +60,15 @@ object Settings {
     fun setShowCleaned(ctx: Context, v: Boolean) {
         p(ctx).edit().putBoolean("show_cleaned", v).apply()
     }
+
+    /** 定期清理开关与周期（天） */
+    fun periodicClean(ctx: Context): Boolean = p(ctx).getBoolean("periodic_clean", false)
+    fun setPeriodicClean(ctx: Context, v: Boolean) {
+        p(ctx).edit().putBoolean("periodic_clean", v).apply()
+    }
+
+    fun periodicDays(ctx: Context): Int = p(ctx).getInt("periodic_days", 7)
+    fun setPeriodicDays(ctx: Context, v: Int) {
+        p(ctx).edit().putInt("periodic_days", v.coerceIn(1, 60)).apply()
+    }
 }

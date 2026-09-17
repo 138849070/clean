@@ -28,12 +28,48 @@ class App : Application() {
             sessionCleaned += bytes
             val prefs = instance.getSharedPreferences("clean", Context.MODE_PRIVATE)
             val total = prefs.getLong("total_cleaned", 0L) + bytes
-            prefs.edit().putLong("total_cleaned", total).apply()
+            prefs.edit()
+                .putLong("total_cleaned", total)
+                .putLong("last_clean_time", System.currentTimeMillis())
+                .apply()
         }
 
         fun totalCleaned(): Long =
             instance.getSharedPreferences("clean", Context.MODE_PRIVATE)
                 .getLong("total_cleaned", 0L)
+
+        /** 上次清理时间（用于定期清理提醒） */
+        fun lastCleanTime(): Long =
+            instance.getSharedPreferences("clean", Context.MODE_PRIVATE)
+                .getLong("last_clean_time", 0L)
+
+        /** 「不要清理」保护的文件/文件夹列表 */
+        fun protectedPaths(): Set<String> =
+            instance.getSharedPreferences("clean", Context.MODE_PRIVATE)
+                .getStringSet("protected", emptySet()) ?: emptySet()
+
+        fun addProtected(path: String) {
+            val prefs = instance.getSharedPreferences("clean", Context.MODE_PRIVATE)
+            val set = HashSet(prefs.getStringSet("protected", emptySet()) ?: emptySet())
+            set.add(path)
+            prefs.edit().putStringSet("protected", set).apply()
+        }
+
+        fun removeProtected(path: String) {
+            val prefs = instance.getSharedPreferences("clean", Context.MODE_PRIVATE)
+            val set = HashSet(prefs.getStringSet("protected", emptySet()) ?: emptySet())
+            set.remove(path)
+            prefs.edit().putStringSet("protected", set).apply()
+        }
+
+        /** 是否处于保护路径下（路径本身或其祖先被保护） */
+        fun isProtected(path: String): Boolean {
+            val s = path.trimEnd('/')
+            return protectedPaths().any { p ->
+                val pp = p.trimEnd('/')
+                s == pp || s.startsWith("$pp/")
+            }
+        }
 
         /** 崩溃日志文件（应用专属目录，无需权限） */
         fun crashLogFile(): File =

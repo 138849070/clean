@@ -6,8 +6,9 @@ import java.io.File
 /** 删除引擎：删除单个文件或整目录，返回释放字节数 */
 object CleanEngine {
 
-    /** 返回本次实际释放的字节数 */
+    /** 返回本次实际释放的字节数（受「不要清理」保护约束） */
     fun delete(path: String): Long {
+        if (com.clean.cleaner.App.isProtected(path)) return 0
         val f = File(path)
         if (!f.exists()) return 0
         val size = if (f.isDirectory) Walker.dirSize(f) else f.length()
