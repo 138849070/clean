@@ -25,6 +25,7 @@ import com.clean.cleaner.scan.DuplicateScanner
 import com.clean.cleaner.scan.LargeFileScanner
 import com.clean.cleaner.scan.ResidueScanner
 import com.clean.cleaner.scan.ScanItem
+import com.clean.cleaner.scan.ShizukuShell
 import com.clean.cleaner.scan.SimilarImageScanner
 import com.clean.cleaner.scan.StorageHelper
 import com.clean.cleaner.scan.Walker
@@ -105,6 +106,7 @@ class ScanResultActivity : AppCompatActivity() {
         "sim" -> "相似图片"
         "apk" -> "安装包清理"
         "residue" -> "卸载残留"
+        "suspect" -> "疑似缓存"
         "empty" -> "空文件夹"
         "emptyfile" -> "空白文件"
         "deep" -> "微信/QQ 深度清理"
@@ -127,13 +129,11 @@ class ScanResultActivity : AppCompatActivity() {
         scanThread = Thread {
             val result: List<ScanItem> = try {
                 when (type) {
-                    "large" -> LargeFileScanner(
-                        minSize = Settings.largeMinMb(this).toLong() * 1024 * 1024,
-                        onProgress = ::throttlePath
-                    ).scan()
+                    "large" -> scanLarge()
                     "dup" -> DuplicateScanner(onProgress = ::throttlePath).scan()
                     "sim" -> SimilarImageScanner(onProgress = ::throttlePath).scan()
                     "residue" -> ResidueScanner(installedPackages(), ::throttlePath).scan()
+                    "suspect" -> scanSuspect()
                     "deep" -> DeepCleanScanner(::throttlePath).scan()
                     "apk" -> scanApks()
                     "empty" -> scanEmptyDirs()
@@ -185,8 +185,48 @@ class ScanResultActivity : AppCompatActivity() {
             }
             true
         })
+        // Android/data 下的 APK（Shizuku）
+        if (ShizukuShell.available()) {
+            for (e in ShizukuShell.listAndroidDataApks()) {
+                out.add(
+                    ScanItem(e.path, e.path.substringAfterLast('/'), e.size,
+                        kind = "apk", groupKey = "apk", groupLabel = "安装包",
+                        extra = SizeUtils.format(e.size))
+                )
+            }
+        }
         out.sortByDescending { it.size }
         return out
+    }
+
+    /** 大文件：普通区 + Android/data（Shizuku） */
+    private fun scanLarge(): List<ScanItem> {
+        val minSize = Settings.largeMinMb(this).toLong() * 1024 * 1024
+        val out = LargeFileScanner(minSize = minSize, onProgress = ::throttlePath).scan().toMutableList()
+        if (ShizukuShell.available()) {
+            for (e in ShizukuShell.listAndroidDataLarge(minSize)) {
+                out.add(
+                    ScanItem(e.path, e.path.substringAfterLast('/'), e.size,
+                        kind = "large", groupKey = "large", groupLabel = "大文件",
+                        extra = SizeUtils.format(e.size))
+                )
+            }
+            out.sortByDescending { it.size }
+        }
+        return out
+    }
+
+    /** 疑似缓存：Android/data 下非精确 cache 名的关键词缓存目录 */
+    private fun scanSuspect(): List<ScanItem> {
+        if (!ShizukuShell.available()) return emptyList()
+        return ShizukuShell.listAndroidDataSuspect().map { e ->
+            ScanItem(
+                e.path, e.path.substringAfterLast('/'), e.size,
+                isDir = true, groupKey = "suspect", groupLabel = "疑似缓存",
+                kind = "suspect",
+                extra = "${e.pkg} · ${SizeUtils.format(e.size)}"
+            )
+        }
     }
 
     private fun scanEmptyDirs(): List<ScanItem> {
@@ -201,6 +241,15 @@ class ScanResultActivity : AppCompatActivity() {
                 false
             } else true
         }, onFile = { true })
+        // Android/data 下的空目录（Shizuku）
+        if (ShizukuShell.available()) {
+            for (p in ShizukuShell.listAndroidDataEmptyDirs()) {
+                out.add(
+                    ScanItem(p, p.substringAfterLast('/'), 0, isDir = true,
+                        groupKey = "empty", groupLabel = "空文件夹", kind = "empty", extra = "0 B")
+                )
+            }
+        }
         return out
     }
 

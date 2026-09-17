@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
         GridItem("重复文件", "📑", "dup"),
         GridItem("空文件夹", "📁", "empty", "待扫描"),
         GridItem("缓存垃圾", "🧹", "junk", "待扫描"),
-        GridItem("疑似缓存", "🗑️", "residue", "待扫描"),
+        GridItem("疑似缓存", "🗑️", "suspect", "待扫描"),
         GridItem("安装包", "📦", "apk", "待扫描"),
         GridItem("大文件", "🗜️", "large", "待扫描"),
         GridItem("五星好评", "⭐", "rate")
@@ -245,6 +245,8 @@ class MainActivity : AppCompatActivity() {
             "periodic" -> Intent(this, SettingsActivity::class.java)
             "toolbox" -> Intent(this, ToolboxActivity::class.java)
             "junk" -> Intent(this, CleanActivity::class.java)
+            "suspect" -> Intent(this, ScanResultActivity::class.java).putExtra("type", "suspect")
+            "residue" -> Intent(this, ScanResultActivity::class.java).putExtra("type", "residue")
             "apps" -> Intent(this, AppManagerActivity::class.java)
             "files" -> Intent(this, FileBrowserActivity::class.java)
             "search" -> Intent(this, SearchActivity::class.java)
@@ -262,6 +264,9 @@ class MainActivity : AppCompatActivity() {
         }
         menu.menu.add("空白文件").setOnMenuItemClickListener {
             openFeature("emptyfile"); true
+        }
+        menu.menu.add("卸载残留").setOnMenuItemClickListener {
+            openFeature("residue"); true
         }
         menu.menu.add("应用管理").setOnMenuItemClickListener {
             openFeature("apps"); true
@@ -383,7 +388,7 @@ class MainActivity : AppCompatActivity() {
         tag(r, "junk")?.text = "大于${SizeUtils.compact(r.junkSize + r.dataCache)}"
         tag(r, "empty")?.text = "${r.emptyCount + r.dataEmptyCount}个"
         // 疑似缓存：Android/data 下非精确 cache 名的关键词缓存目录
-        tag(r, "residue")?.text = "${r.dataSuspectCount}个(${SizeUtils.compact(r.dataSuspectSize)})"
+        tag(r, "suspect")?.text = "${r.dataSuspectCount}个(${SizeUtils.compact(r.dataSuspectSize)})"
         tag(r, "apk")?.text = "${r.apkCount + r.dataApkCount}个(${SizeUtils.compact(r.apkSize + r.dataApkSize)})"
         tag(r, "large")?.text = "${r.largeCount + r.dataLargeCount}个(${SizeUtils.compact(r.largeSize + r.dataLargeSize)})"
         // 无统计标签的入口保持隐藏

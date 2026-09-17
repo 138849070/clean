@@ -141,7 +141,7 @@ object ShizukuShell {
         val out = exec(script) ?: return null
         val lines = out.trim().split("\n").map { it.trim().toLongOrNull() ?: 0L }
         if (lines.size < 8) return null
-        // 缓存分类：精确 cache 名 vs 其他关键词（疑似）
+        // 缓存分类：全部关键词目录都算缓存垃圾（与清理页一致），非精确名单独记疑似缓存
         val caches = listAndroidDataCaches()
         val exactNames = setOf("cache", "caches", ".cache", "code_cache")
         val exact = caches.filter { exactNames.contains(it.path.substringAfterLast('/').lowercase()) }
@@ -155,10 +155,61 @@ object ShizukuShell {
             largeCount = lines[5],
             largeSize = lines[6],
             emptyCount = lines[7],
-            cacheSize = exact.sumOf { it.size },
-            cacheCount = exact.size.toLong(),
+            cacheSize = caches.sumOf { it.size },
+            cacheCount = caches.size.toLong(),
             suspectSize = suspect.sumOf { it.size },
             suspectCount = suspect.size.toLong()
         )
+    }
+
+    /** Android/data 下非精确 cache 名的关键词缓存目录（疑似缓存） */
+    fun listAndroidDataSuspect(): List<CacheEntry> {
+        val exactNames = setOf("cache", "caches", ".cache", "code_cache")
+        return listAndroidDataCaches()
+            .filterNot { exactNames.contains(it.path.substringAfterLast('/').lowercase()) }
+    }
+
+    /** Android/data（含 obb）下所有 APK 文件 */
+    fun listAndroidDataApks(): List<CacheEntry> {
+        if (!available()) return emptyList()
+        val dataRoot = "/storage/emulated/0/Android/data"
+        val obbRoot = "/storage/emulated/0/Android/obb"
+        val script =
+            "find $dataRoot $obbRoot -type f -iname \"*.apk\" -exec du -sk {} + 2>/dev/null"
+        val out = exec(script) ?: return emptyList()
+        return parseSizePath(out)
+    }
+
+    /** Android/data（含 obb）下大于 minSize 字节的文件 */
+    fun listAndroidDataLarge(minSize: Long): List<CacheEntry> {
+        if (!available()) return emptyList()
+        val dataRoot = "/storage/emulated/0/Android/data"
+        val obbRoot = "/storage/emulated/0/Android/obb"
+        val minKb = (minSize / 1024).coerceAtLeast(1)
+        val script =
+            "find $dataRoot $obbRoot -type f -size +${minKb}k -exec du -sk {} + 2>/dev/null"
+        val out = exec(script) ?: return emptyList()
+        return parseSizePath(out)
+    }
+
+    /** Android/data（含 obb）下所有空目录 */
+    fun listAndroidDataEmptyDirs(): List<String> {
+        if (!available()) return emptyList()
+        val dataRoot = "/storage/emulated/0/Android/data"
+        val obbRoot = "/storage/emulated/0/Android/obb"
+        val out = exec("find $dataRoot $obbRoot -type d -empty 2>/dev/null") ?: return emptyList()
+        return out.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+    }
+
+    private fun parseSizePath(out: String): List<CacheEntry> {
+        val result = ArrayList<CacheEntry>()
+        for (line in out.lineSequence()) {
+            val parts = line.trim().split(Regex("\\s+"), limit = 2)
+            if (parts.size != 2) continue
+            val kb = parts[0].toLongOrNull() ?: continue
+            val path = parts[1]
+            result.add(CacheEntry(path, kb * 1024, ""))
+        }
+        return result
     }
 }

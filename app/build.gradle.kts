@@ -11,8 +11,8 @@ android {
         applicationId = "com.clean.cleaner"
         minSdk = 24
         targetSdk = 33
-        versionCode = 15
-        versionName = "1.13.0"
+        versionCode = 16
+        versionName = "1.14.0"
     }
 
     buildTypes {
