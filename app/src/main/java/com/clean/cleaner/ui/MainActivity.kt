@@ -17,6 +17,7 @@ import com.clean.cleaner.App
 import com.clean.cleaner.R
 import com.clean.cleaner.scan.MainScan
 import com.clean.cleaner.scan.MainScanResult
+import com.clean.cleaner.scan.ShizukuShell
 import com.clean.cleaner.scan.StorageHelper
 import com.clean.cleaner.util.SizeUtils
 import com.clean.cleaner.util.Settings
@@ -120,9 +121,46 @@ class MainActivity : AppCompatActivity() {
         }
         checkPeriodicClean()
         ensureDataAccess()
+        ensureShizuku()
     }
 
     private var hasPromptedDataAccess = false
+    private var hasPromptedShizuku = false
+
+    /** 主动请求 Shizuku 授权：服务可用但未授权时弹出授权框 */
+    private fun ensureShizuku() {
+        if (hasPromptedShizuku) return
+        if (!Settings.shizukuAccess(this)) return
+        hasPromptedShizuku = true
+        try {
+            if (!ShizukuShell.serviceRunning()) {
+                AlertDialog.Builder(this)
+                    .setTitle("启用 Shizuku 可扫全 Android/data")
+                    .setMessage("要完整扫描 Android/data（各应用的数据与缓存），需要 Shizuku。\n\n方法：安装 Shizuku 应用 → 在 Shizuku 中通过「无线调试」激活 → 回到本应用重新授权。")
+                    .setPositiveButton("去了解") { _, _ ->
+                        ShizukuShell.requestPermission(9091)
+                    }
+                    .setNegativeButton("暂不使用", null)
+                    .show()
+            } else if (!ShizukuShell.permissionGranted()) {
+                ShizukuShell.requestPermission(9091)
+            }
+        } catch (ignored: Exception) {
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 9091) {
+            if (ShizukuShell.permissionGranted()) {
+                android.widget.Toast.makeText(this, "Shizuku 已授权，重新扫描即可扫全 Android/data", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     /** 首次提醒授权 Android/data（MT管理器同款方式，扫全需要） */
     private fun ensureDataAccess() {

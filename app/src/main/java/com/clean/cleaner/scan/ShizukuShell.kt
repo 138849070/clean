@@ -21,20 +21,31 @@ object ShizukuShell {
         m
     }
 
-    /** Shizuku 服务是否运行且已授权 */
-    fun available(): Boolean {
+    /** Shizuku 服务是否运行 */
+    fun serviceRunning(): Boolean {
         return try {
-            if (!Shizuku.pingBinder()) false
-            else Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+            Shizuku.pingBinder()
         } catch (e: Throwable) {
             false
         }
     }
 
-    /** 请求 Shizuku 授权（结果在 onRequestPermissionsResult 回调） */
+    /** 本应用是否已获得 Shizuku 授权 */
+    fun permissionGranted(): Boolean {
+        return try {
+            Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
+    /** Shizuku 是否就绪（服务运行 + 已授权） */
+    fun available(): Boolean = serviceRunning() && permissionGranted()
+
+    /** 请求 Shizuku 授权（ShizukuManager 会弹出授权对话框） */
     fun requestPermission(requestCode: Int) {
         try {
-            if (Shizuku.isPreV11() || android.os.Build.VERSION.SDK_INT >= 23) {
+            if (serviceRunning()) {
                 Shizuku.requestPermission(requestCode)
             }
         } catch (ignored: Throwable) {
@@ -66,10 +77,11 @@ object ShizukuShell {
         if (!available()) return null
         val dataRoot = "/storage/emulated/0/Android/data"
         val obbRoot = "/storage/emulated/0/Android/obb"
+        // 注意：Android toybox 的 du 不支持 -b，用 -sk 输出 KB 再换算字节
         val script =
             "find $dataRoot $obbRoot -type f 2>/dev/null | wc -l;" +
-                "du -sb $dataRoot $obbRoot 2>/dev/null | awk '{s+=\$1} END {print s+0}';" +
-                "du -sb $dataRoot/*/cache $dataRoot/*/code_cache $obbRoot/* 2>/dev/null | awk '{s+=\$1} END {print s+0}'"
+                "du -sk $dataRoot $obbRoot 2>/dev/null | awk '{s+=\$1} END {print s*1024}';" +
+                "du -sk $dataRoot/*/cache $dataRoot/*/code_cache $obbRoot/* 2>/dev/null | awk '{s+=\$1} END {print s*1024}'"
         val out = exec(script) ?: return null
         val lines = out.trim().split("\n").map { it.trim().toLongOrNull() ?: 0L }
         if (lines.size < 3) return null

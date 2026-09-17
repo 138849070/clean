@@ -70,8 +70,19 @@ class SettingsActivity : AppCompatActivity() {
         // Shizuku：访问 Android/data 受限目录
         swShizuku.setOnCheckedChangeListener { _, v ->
             Settings.setShizukuAccess(this, v)
-            if (v && !ShizukuShell.available()) {
-                ShizukuShell.requestPermission(9090)
+            if (v) {
+                when {
+                    !ShizukuShell.serviceRunning() ->
+                        Toast.makeText(
+                            this,
+                            "Shizuku 服务未运行：请先安装 Shizuku 应用，并通过无线调试激活",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    !ShizukuShell.permissionGranted() ->
+                        ShizukuShell.requestPermission(9090)
+                    else ->
+                        Toast.makeText(this, "Shizuku 已就绪", Toast.LENGTH_SHORT).show()
+                }
             }
         }
         // SAF 授权：直接打开系统文件选择器并定位到 Android/data
@@ -137,10 +148,10 @@ class SettingsActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 9090) {
-            if (ShizukuShell.available()) {
+            if (ShizukuShell.permissionGranted()) {
                 Toast.makeText(this, "Shizuku 已授权，重新扫描即可扫全 Android/data", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "Shizuku 未授权：请先安装 Shizuku 并在其中授权本应用", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Shizuku 未授权：请在 Shizuku 中允许本应用", Toast.LENGTH_LONG).show()
             }
         }
     }
