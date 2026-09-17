@@ -18,6 +18,7 @@ data class MainScanResult(
     val residueCount: Int = 0,
     val residueSize: Long = 0,
     val emptyCount: Int = 0,
+    val emptyFileCount: Int = 0,
     val folderCount: Int = 0,
     val fileCount: Int = 0,
     val totalSize: Long = 0
@@ -26,6 +27,8 @@ data class MainScanResult(
 /** 主界面全局扫描：一次遍历统计所有功能入口的规模 */
 class MainScan(
     private val installedPackages: Set<String>,
+    private val excludedPaths: Set<String> = emptySet(),
+    private val scanEmptyFiles: Boolean = false,
     private val onProgress: (String) -> Unit = {}
 ) {
 
@@ -54,6 +57,7 @@ class MainScan(
     private var residueCount = 0
     private var residueSize = 0L
     private var emptyCount = 0
+    private var emptyFileCount = 0
     private var folderCount = 0
     private var fileCount = 0
     private var totalSize = 0L
@@ -79,7 +83,7 @@ class MainScan(
             simSize = simSizes.filterKeys { (simCounts[it] ?: 0) >= 2 }.values.sum(),
             apkCount = apkCount, apkSize = apkSize,
             residueCount = residueCount, residueSize = residueSize,
-            emptyCount = emptyCount,
+            emptyCount = emptyCount, emptyFileCount = emptyFileCount,
             folderCount = folderCount, fileCount = fileCount,
             totalSize = totalSize
         )
@@ -93,6 +97,11 @@ class MainScan(
             parentPath == "${root.absolutePath}/Android/obb"
         for (f in list) {
             if (Thread.currentThread().isInterrupted) return
+            // 排除用户指定的文件夹
+            if (excludedPaths.isNotEmpty()) {
+                val rel = f.absolutePath.removePrefix(root.absolutePath).trimStart('/')
+                if (excludedPaths.any { rel == it || rel.startsWith("$it/") }) continue
+            }
             onProgress(f.absolutePath)
             if (f.isDirectory) {
                 folderCount++
@@ -110,6 +119,7 @@ class MainScan(
                 fileCount++
                 val size = f.length()
                 totalSize += size
+                if (size == 0L && scanEmptyFiles) emptyFileCount++
                 if (inResidue) {
                     residueSize += size
                     continue

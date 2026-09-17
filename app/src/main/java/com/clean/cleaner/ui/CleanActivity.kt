@@ -49,6 +49,10 @@ class CleanActivity : AppCompatActivity() {
         StatusBarUtil.transparent(this, lightIcons = !StatusBarUtil.isDarkMode(this))
         setContentView(R.layout.activity_clean)
 
+        if (com.clean.cleaner.util.Settings.keepScreen(this)) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
         resultList = findViewById(R.id.resultList)
         scanOverlay = findViewById(R.id.scanOverlay)
         radarView = findViewById(R.id.radarView)

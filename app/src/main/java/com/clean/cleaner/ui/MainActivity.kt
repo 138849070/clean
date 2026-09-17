@@ -18,6 +18,7 @@ import com.clean.cleaner.scan.MainScan
 import com.clean.cleaner.scan.MainScanResult
 import com.clean.cleaner.scan.StorageHelper
 import com.clean.cleaner.util.SizeUtils
+import com.clean.cleaner.util.Settings
 import com.clean.cleaner.util.StatusBarUtil
 
 @SuppressLint("SetTextI18n")
@@ -56,7 +57,10 @@ class MainActivity : AppCompatActivity() {
         GridItem("最新文件", "🕒", "recent"),
         GridItem("最旧文件", "⏳", "oldest"),
         GridItem("应用管理", "📱", "apps"),
-        GridItem("文件管理", "🗂️", "files")
+        GridItem("文件管理", "🗂️", "files"),
+        GridItem("空白文件", "📄", "emptyfile"),
+        GridItem("秒搜文件", "🔍", "search"),
+        GridItem("工具箱", "🧰", "toolbox")
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +93,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnScan.setOnClickListener { startScan() }
-        findViewById<View>(R.id.btnSettings).setOnClickListener { showAbout() }
+        findViewById<View>(R.id.btnSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         buildGrid()
         refreshHeader()
@@ -108,6 +114,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         refreshHeader()
+        // 自动扫描：设置开启且本会话未扫描过
+        if (App.lastScan == null && Settings.autoScan(this) && PermissionActivity.hasStorageAccess()) {
+            startScan()
+        }
     }
 
     override fun onDestroy() {
@@ -128,6 +138,9 @@ class MainActivity : AppCompatActivity() {
         val percent = SizeUtils.formatPercent(free, total)
         tvPercent.text = "$percent%"
         tvSpace.text = "手机存储 ${SizeUtils.format(free)} / ${SizeUtils.format(total)}"
+        val showCleaned = Settings.showCleaned(this)
+        tvTotalCleaned.visibility = if (showCleaned) View.VISIBLE else View.GONE
+        tvSessionCleaned.visibility = if (showCleaned) View.VISIBLE else View.GONE
         tvTotalCleaned.text = "累计清理：${SizeUtils.format(App.totalCleaned())}"
         tvSessionCleaned.text = "本次清理：${SizeUtils.format(App.sessionCleaned)}"
     }
@@ -173,6 +186,8 @@ class MainActivity : AppCompatActivity() {
             "junk" -> Intent(this, CleanActivity::class.java)
             "apps" -> Intent(this, AppManagerActivity::class.java)
             "files" -> Intent(this, FileBrowserActivity::class.java)
+            "search" -> Intent(this, SearchActivity::class.java)
+            "toolbox" -> Intent(this, ToolboxActivity::class.java)
             else -> Intent(this, ScanResultActivity::class.java).putExtra("type", type)
         }
         startActivity(intent)
@@ -199,7 +214,11 @@ class MainActivity : AppCompatActivity() {
 
         scanThread = Thread {
             val result = try {
-                MainScan(installed) {}.scan()
+                MainScan(
+                    installedPackages = installed,
+                    excludedPaths = Settings.excludeList(this).toSet(),
+                    scanEmptyFiles = Settings.emptyFiles(this)
+                ) {}.scan()
             } catch (e: Exception) {
                 null
             }
@@ -237,8 +256,11 @@ class MainActivity : AppCompatActivity() {
         tag(r, "apk")?.text = "${r.apkCount}个(${SizeUtils.compact(r.apkSize)})"
         tag(r, "residue")?.text = "${r.residueCount}个(${SizeUtils.compact(r.residueSize)})"
         tag(r, "empty")?.text = "${r.emptyCount}个"
-        // 最新/最旧/应用管理/文件管理：无统计，保持隐藏
-        listOf("recent", "oldest", "apps", "files").forEach {
+        if (Settings.emptyFiles(this)) {
+            tag(r, "emptyfile")?.text = "${r.emptyFileCount}个"
+        }
+        // 最新/最旧/应用管理/文件管理/搜索/工具箱：无统计，保持隐藏
+        listOf("recent", "oldest", "apps", "files", "search", "toolbox").forEach {
             tagViews[it]?.visibility = View.GONE
         }
     }

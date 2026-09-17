@@ -5,9 +5,11 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
@@ -26,8 +28,10 @@ import com.clean.cleaner.scan.ScanItem
 import com.clean.cleaner.scan.SimilarImageScanner
 import com.clean.cleaner.scan.StorageHelper
 import com.clean.cleaner.scan.Walker
+import com.clean.cleaner.util.Settings
 import com.clean.cleaner.util.SizeUtils
 import com.clean.cleaner.util.StatusBarUtil
+import java.io.File
 
 @SuppressLint("SetTextI18n")
 class ScanResultActivity : AppCompatActivity() {
@@ -39,6 +43,7 @@ class ScanResultActivity : AppCompatActivity() {
     private lateinit var checkAll: CheckBox
     private lateinit var tvSelected: TextView
     private lateinit var btnClean: Button
+    private lateinit var btnExtract: Button
 
     private val items = mutableListOf<ScanItem>()
     private lateinit var adapter: ScanResultAdapter
@@ -53,6 +58,11 @@ class ScanResultActivity : AppCompatActivity() {
         StatusBarUtil.transparent(this, lightIcons = !StatusBarUtil.isDarkMode(this))
         setContentView(R.layout.activity_scan_result)
 
+        // 屏幕常亮
+        if (Settings.keepScreen(this)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
         type = intent.getStringExtra("type") ?: "large"
 
         resultList = findViewById(R.id.resultList)
@@ -62,6 +72,11 @@ class ScanResultActivity : AppCompatActivity() {
         checkAll = findViewById(R.id.checkAll)
         tvSelected = findViewById(R.id.tvSelected)
         btnClean = findViewById(R.id.btnClean)
+        btnExtract = findViewById(R.id.btnExtract)
+
+        // 安装包页：提供提取功能
+        if (type == "apk") btnExtract.visibility = View.VISIBLE
+        btnExtract.setOnClickListener { extractApks() }
 
         findViewById<TextView>(R.id.tvTitle).text = titleOf(type)
         findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
@@ -91,6 +106,7 @@ class ScanResultActivity : AppCompatActivity() {
         "apk" -> "安装包清理"
         "residue" -> "卸载残留"
         "empty" -> "空文件夹"
+        "emptyfile" -> "空白文件"
         "deep" -> "微信/QQ 深度清理"
         "recent" -> "最新文件"
         "oldest" -> "最旧文件"
@@ -111,13 +127,17 @@ class ScanResultActivity : AppCompatActivity() {
         scanThread = Thread {
             val result: List<ScanItem> = try {
                 when (type) {
-                    "large" -> LargeFileScanner(onProgress = ::throttlePath).scan()
+                    "large" -> LargeFileScanner(
+                        minSize = Settings.largeMinMb(this).toLong() * 1024 * 1024,
+                        onProgress = ::throttlePath
+                    ).scan()
                     "dup" -> DuplicateScanner(onProgress = ::throttlePath).scan()
                     "sim" -> SimilarImageScanner(onProgress = ::throttlePath).scan()
                     "residue" -> ResidueScanner(installedPackages(), ::throttlePath).scan()
                     "deep" -> DeepCleanScanner(::throttlePath).scan()
                     "apk" -> scanApks()
                     "empty" -> scanEmptyDirs()
+                    "emptyfile" -> scanEmptyFiles()
                     "recent" -> scanByTime(true)
                     "oldest" -> scanByTime(false)
                     else -> emptyList()
@@ -182,6 +202,67 @@ class ScanResultActivity : AppCompatActivity() {
             } else true
         }, onFile = { true })
         return out
+    }
+
+    /** 空白文件：0 字节文件 */
+    private fun scanEmptyFiles(): List<ScanItem> {
+        val out = ArrayList<ScanItem>()
+        Walker.walk(Walker.root, onFile = { f ->
+            if (!f.isDirectory && f.length() == 0L) {
+                out.add(
+                    ScanItem(f.absolutePath, f.name, 0,
+                        groupKey = "emptyfile", groupLabel = "空白文件",
+                        kind = StorageHelper.categoryOf(f.name).let { if (it == "other") "doc" else it },
+                        extra = "0 B")
+                )
+            }
+            true
+        })
+        return out
+    }
+
+    /** 提取选中的 APK 到 Download/安装包提取 */
+    private fun extractApks() {
+        val sel = adapter.getSelectedItems()
+        if (sel.isEmpty()) {
+            Toast.makeText(this, "请先勾选要提取的安装包", Toast.LENGTH_SHORT).show()
+            return
+        }
+        btnExtract.isEnabled = false
+        Thread {
+            val destDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "安装包提取"
+            )
+            var ok = 0
+            var fail = 0
+            for (item in sel) {
+                try {
+                    val src = File(item.path)
+                    if (!src.exists()) {
+                        fail++
+                        continue
+                    }
+                    destDir.mkdirs()
+                    val dest = File(destDir, src.name)
+                    src.copyTo(dest, overwrite = true)
+                    ok++
+                } catch (e: Exception) {
+                    fail++
+                }
+            }
+            handler.post {
+                btnExtract.isEnabled = true
+                Toast.makeText(
+                    this,
+                    "提取完成：成功 $ok 个${if (fail > 0) "，失败 $fail 个" else ""}\n已保存到 Download/安装包提取",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }.apply {
+            isDaemon = true
+            start()
+        }
     }
 
     private val timeFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
