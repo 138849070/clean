@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Environment
 import android.widget.Toast
 import com.clean.cleaner.scan.MainScanResult
+import com.clean.cleaner.util.Settings
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -105,6 +106,18 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        // 深色模式：跟随系统 或 强制深色，冷启动时也要应用
+        try {
+            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                if (Settings.darkFollow(this)) {
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                } else {
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                }
+            )
+        } catch (ignored: Exception) {
+        }
 
         // 全局崩溃捕获：记录堆栈，便于定位闪退原因
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->

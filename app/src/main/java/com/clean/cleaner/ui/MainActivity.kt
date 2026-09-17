@@ -109,7 +109,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (!hasCheckedPermission) {
             hasCheckedPermission = true
-            if (!PermissionActivity.hasStorageAccess()) {
+            if (!PermissionActivity.hasStorageAccess() || !PermissionActivity.hasMediaAccess()) {
                 startActivityForResult(Intent(this, PermissionActivity::class.java), 1001)
             }
         }

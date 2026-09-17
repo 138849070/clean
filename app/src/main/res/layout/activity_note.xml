@@ -12,7 +12,7 @@
         android:layout_height="54dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@color/white"
+        android:background="@color/card"
         android:paddingStart="6dp"
         android:paddingEnd="12dp">
 

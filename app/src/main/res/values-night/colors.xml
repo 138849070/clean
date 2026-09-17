@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式配色 -->
+    <color name="primary">#35A0FF</color>
+    <color name="primary_dark">#1E5FEF</color>
+    <color name="primary_light">#1B3050</color>
+    <color name="accent">#35A0FF</color>
+    <color name="bg">#12151A</color>
+    <color name="card">#1C2128</color>
+    <color name="text_main">#E6EAF0</color>
+    <color name="text_secondary">#9AA3AD</color>
+    <color name="divider">#2A3038</color>
+    <color name="orange">#FF9F0A</color>
+    <color name="red">#FF453A</color>
+    <color name="blue">#35A0FF</color>
+    <color name="purple">#BF5AF2</color>
+    <color name="cyan">#64D2FF</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black_40">#66000000</color>
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_70">#B3FFFFFF</color>
+</resources>

@@ -36,8 +36,7 @@ object MediaScanner {
             context.contentResolver.query(uri, projection, null, null, null)?.use { c ->
                 val sizeIdx = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
                 val mimeIdx = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
-                while (c.moveToNext()) {
-                    fileCount++
+                while (c.moveToNext()) {                    fileCount++
                     totalSize += c.getLong(sizeIdx)
                     val mime = c.getString(mimeIdx) ?: continue
                     when {
