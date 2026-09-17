@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.clean.cleaner.R
+import com.clean.cleaner.util.StatusBarUtil
 
 class PermissionActivity : AppCompatActivity() {
 
@@ -20,6 +21,7 @@ class PermissionActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StatusBarUtil.transparent(this, lightIcons = !StatusBarUtil.isDarkMode(this))
         setContentView(R.layout.activity_permission)
 
         findViewById<android.widget.Button>(R.id.btnGrant).setOnClickListener {

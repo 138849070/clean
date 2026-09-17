@@ -149,7 +149,7 @@ class ScanResultAdapter(
     }
 
     private fun kindStyle(kind: String): Pair<String, Int> = when (kind) {
-        "cache" -> "缓" to 0xFF00B578.toInt()
+        "cache" -> "缓" to 0xFF2F7BF5.toInt()
         "log" -> "日" to 0xFF8A8F8D.toInt()
         "tmp" -> "临" to 0xFFFF9500.toInt()
         "thumb" -> "缩" to 0xFF0A84FF.toInt()

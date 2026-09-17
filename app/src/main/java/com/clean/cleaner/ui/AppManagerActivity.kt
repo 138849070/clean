@@ -18,10 +18,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.clean.cleaner.App
 import com.clean.cleaner.R
 import com.clean.cleaner.scan.CleanEngine
 import com.clean.cleaner.scan.Walker
 import com.clean.cleaner.util.SizeUtils
+import com.clean.cleaner.util.StatusBarUtil
 import java.io.File
 
 @SuppressLint("SetTextI18n")
@@ -43,6 +45,7 @@ class AppManagerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StatusBarUtil.transparent(this, lightIcons = !StatusBarUtil.isDarkMode(this))
         setContentView(R.layout.activity_app_manager)
 
         appList = findViewById(R.id.appList)
@@ -142,6 +145,7 @@ class AppManagerActivity : AppCompatActivity() {
         Thread {
             val dir = File(Walker.root, "Android/data/${app.packageName}")
             val freed = if (dir.exists()) CleanEngine.delete(dir.absolutePath) else 0L
+            App.addCleaned(freed)
             handler.post {
                 Toast.makeText(this, "已释放 ${SizeUtils.format(freed)}", Toast.LENGTH_SHORT).show()
                 loadApps()

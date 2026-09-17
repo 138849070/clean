@@ -13,11 +13,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.clean.cleaner.App
 import com.clean.cleaner.R
 import com.clean.cleaner.scan.CleanEngine
 import com.clean.cleaner.scan.ScanItem
 import com.clean.cleaner.scan.StorageHelper
 import com.clean.cleaner.util.SizeUtils
+import com.clean.cleaner.util.StatusBarUtil
 
 @SuppressLint("SetTextI18n")
 class CategoryFilesActivity : AppCompatActivity() {
@@ -38,6 +40,7 @@ class CategoryFilesActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StatusBarUtil.transparent(this, lightIcons = !StatusBarUtil.isDarkMode(this))
         setContentView(R.layout.activity_category_files)
 
         category = intent.getStringExtra("category") ?: "image"
@@ -117,6 +120,7 @@ class CategoryFilesActivity : AppCompatActivity() {
         Thread {
             val paths = sel.map { it.path }
             val (count, freed) = CleanEngine.deleteAll(paths)
+            App.addCleaned(freed)
             handler.post {
                 btnDelete.isEnabled = true
                 Toast.makeText(this, "已删除 $count 项 · 释放 ${SizeUtils.format(freed)}", Toast.LENGTH_SHORT).show()

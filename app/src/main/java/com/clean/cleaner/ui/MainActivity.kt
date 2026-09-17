@@ -1,6 +1,7 @@
 package com.clean.cleaner.ui
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,68 +9,70 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import com.clean.cleaner.App
 import com.clean.cleaner.R
-import com.clean.cleaner.scan.ScanItem
 import com.clean.cleaner.scan.StorageHelper
 import com.clean.cleaner.util.SizeUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.clean.cleaner.util.StatusBarUtil
 
 @SuppressLint("SetTextI18n")
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var ringView: RingView
-    private lateinit var tvUsed: TextView
+    private lateinit var headerCard: View
     private lateinit var tvPercent: TextView
-    private lateinit var tvSpaceInfo: TextView
-    private lateinit var categoryGrid: LinearLayout
-    private lateinit var featureList: LinearLayout
+    private lateinit var tvSpace: TextView
+    private lateinit var tvTotalCleaned: TextView
+    private lateinit var tvSessionCleaned: TextView
+    private lateinit var grid: LinearLayout
 
-    private data class CategoryInfo(val key: String, val emoji: String)
-    private data class FeatureInfo(val name: String, val desc: String, val emoji: String, val type: String)
+    private data class GridItem(val name: String, val emoji: String, val type: String, val tag: String? = null)
 
-    private val categories = listOf(
-        CategoryInfo("image", "🖼️"),
-        CategoryInfo("video", "🎬"),
-        CategoryInfo("audio", "🎵"),
-        CategoryInfo("doc", "📄"),
-        CategoryInfo("apk", "📦"),
-        CategoryInfo("other", "📁")
-    )
-
-    private val features = listOf(
-        FeatureInfo("垃圾清理", "缓存 · 日志 · 临时文件 · 缩略图", "🧹", "junk"),
-        FeatureInfo("微信/QQ 深度清理", "聊天图片 · 视频 · 语音 · 缓存", "💬", "deep"),
-        FeatureInfo("大文件", "找出占用空间最大的文件", "🗜️", "large"),
-        FeatureInfo("重复文件", "清理重复占用空间的文件", "📑", "dup"),
-        FeatureInfo("相似图片", "找出内容相似的图片", "🖼️", "sim"),
-        FeatureInfo("安装包清理", "清理残留的 APK 安装包", "📦", "apk"),
-        FeatureInfo("卸载残留", "卸载应用后遗留的数据", "🗑️", "residue"),
-        FeatureInfo("空文件夹", "清理空的文件夹", "📁", "empty"),
-        FeatureInfo("应用管理", "查看应用缓存并清理", "📱", "apps"),
-        FeatureInfo("文件浏览器", "浏览并管理所有文件", "🗂️", "files")
+    private val gridItems = listOf(
+        GridItem("缓存垃圾", "🧹", "junk", "待扫描"),
+        GridItem("微信清理", "💬", "deep"),
+        GridItem("大文件", "🗜️", "large", "待扫描"),
+        GridItem("重复文件", "📑", "dup", "待扫描"),
+        GridItem("相似图片", "🖼️", "sim"),
+        GridItem("安装包", "📦", "apk", "待扫描"),
+        GridItem("卸载残留", "🗑️", "residue"),
+        GridItem("空文件夹", "📁", "empty", "待扫描"),
+        GridItem("最新文件", "🕒", "recent"),
+        GridItem("最旧文件", "⏳", "oldest"),
+        GridItem("应用管理", "📱", "apps"),
+        GridItem("文件管理", "🗂️", "files")
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 状态栏透明、白色图标（顶部为蓝色背景）
+        StatusBarUtil.transparent(this, lightIcons = false)
         setContentView(R.layout.activity_main)
 
-        ringView = findViewById(R.id.ringView)
-        tvUsed = findViewById(R.id.tvUsed)
+        headerCard = findViewById(R.id.headerCard)
         tvPercent = findViewById(R.id.tvPercent)
-        tvSpaceInfo = findViewById(R.id.tvSpaceInfo)
-        categoryGrid = findViewById(R.id.categoryGrid)
-        featureList = findViewById(R.id.featureList)
+        tvSpace = findViewById(R.id.tvSpace)
+        tvTotalCleaned = findViewById(R.id.tvTotalCleaned)
+        tvSessionCleaned = findViewById(R.id.tvSessionCleaned)
+        grid = findViewById(R.id.grid)
+
+        // 顶部蓝卡延伸到状态栏后面：动态加状态栏高度 padding
+        val sb = StatusBarUtil.statusBarHeight(this)
+        if (sb > 0) {
+            headerCard.setPadding(
+                headerCard.paddingLeft,
+                headerCard.paddingTop + sb,
+                headerCard.paddingRight,
+                headerCard.paddingBottom
+            )
+        }
 
         findViewById<View>(R.id.btnScan).setOnClickListener {
             startActivity(Intent(this, CleanActivity::class.java))
         }
+        findViewById<View>(R.id.btnSettings).setOnClickListener { showAbout() }
 
-        buildFeatureList()
-        refreshStorage()
-        loadCategories()
+        buildGrid()
+        refreshHeader()
     }
 
     override fun onResume() {
@@ -77,82 +80,57 @@ class MainActivity : AppCompatActivity() {
         if (!PermissionActivity.hasStorageAccess()) {
             startActivityForResult(Intent(this, PermissionActivity::class.java), 1001)
         }
+        refreshHeader()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 1001) {
-            if (!PermissionActivity.hasStorageAccess()) {
-                // 仍未授权，展示权限页引导（不阻塞主页浏览）
-            } else {
-                refreshStorage()
-                loadCategories()
-            }
+            refreshHeader()
         }
     }
 
-    private fun refreshStorage() {
+    private fun refreshHeader() {
         val total = StorageHelper.totalSpace()
         val free = StorageHelper.freeSpace()
-        val used = StorageHelper.usedSpace()
-        tvUsed.text = SizeUtils.format(used)
-        tvPercent.text = "已用 ${SizeUtils.formatPercent(used, total)}%"
-        tvSpaceInfo.text = "可用 ${SizeUtils.format(free)} · 共 ${SizeUtils.format(total)}"
-        ringView.progress = used.toFloat() / total.toFloat()
+        val percent = SizeUtils.formatPercent(free, total)
+        tvPercent.text = "$percent%"
+        tvSpace.text = "手机存储 ${SizeUtils.format(free)} / ${SizeUtils.format(total)}"
+        tvTotalCleaned.text = "累计清理：${SizeUtils.format(App.totalCleaned())}"
+        tvSessionCleaned.text = "本次清理：${SizeUtils.format(App.sessionCleaned)}"
     }
 
-    private fun loadCategories() {
-        categoryGrid.removeAllViews()
-        if (!PermissionActivity.hasStorageAccess()) return
-        lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                StorageHelper.categorize { }
-            }
-            renderCategories(result)
-        }
-    }
-
-    private fun renderCategories(sizes: Map<String, Long>) {
-        categoryGrid.removeAllViews()
-        val total = sizes.values.sum()
-        val rows = categories.chunked(3)
+    private fun buildGrid() {
+        grid.removeAllViews()
         val inflater = LayoutInflater.from(this)
-        for (row in rows) {
+        gridItems.chunked(3).forEach { row ->
             val rowLayout = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                val lp = (layoutParams as LinearLayout.LayoutParams)
-                lp.bottomMargin = dp(8)
             }
-            for (c in row) {
-                val item = inflater.inflate(R.layout.item_category, rowLayout, false)
-                item.findViewById<TextView>(R.id.tvIcon).text = c.emoji
-                item.findViewById<TextView>(R.id.tvName).text = StorageHelper.categoryLabel(c.key)
-                val size = sizes[c.key] ?: 0L
-                item.findViewById<TextView>(R.id.tvSize).text = SizeUtils.format(size)
-                item.setOnClickListener {
-                    val intent = Intent(this, CategoryFilesActivity::class.java)
-                    intent.putExtra("category", c.key)
-                    startActivity(intent)
+            for (item in row) {
+                val cell = inflater.inflate(R.layout.item_grid, rowLayout, false)
+                cell.findViewById<TextView>(R.id.tvIcon).text = item.emoji
+                cell.findViewById<TextView>(R.id.tvName).text = item.name
+                val tag = cell.findViewById<TextView>(R.id.tvTag)
+                if (item.tag != null) {
+                    tag.text = item.tag
+                    tag.visibility = View.VISIBLE
                 }
-                rowLayout.addView(item)
+                cell.setOnClickListener { openFeature(item.type) }
+                rowLayout.addView(cell)
             }
-            categoryGrid.addView(rowLayout)
-        }
-    }
-
-    private fun buildFeatureList() {
-        val inflater = LayoutInflater.from(this)
-        for (f in features) {
-            val item = inflater.inflate(R.layout.item_feature, featureList, false)
-            item.findViewById<TextView>(R.id.tvIcon).text = f.emoji
-            item.findViewById<TextView>(R.id.tvName).text = f.name
-            item.findViewById<TextView>(R.id.tvDesc).text = f.desc
-            item.setOnClickListener { openFeature(f.type) }
-            featureList.addView(item)
+            // 补齐空位，保持每行 3 个占位
+            val missing = 3 - row.size
+            for (i in 0 until missing) {
+                rowLayout.addView(View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+            }
+            grid.addView(rowLayout)
         }
     }
 
@@ -166,5 +144,11 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+    private fun showAbout() {
+        AlertDialog.Builder(this)
+            .setTitle("Clean 清理")
+            .setMessage("版本 1.1.0\n\n免费安卓存储清理工具，无会员、无广告、无网络请求。\n\n清理功能均在本机完成，不会上传任何数据。")
+            .setPositiveButton("好的", null)
+            .show()
+    }
 }

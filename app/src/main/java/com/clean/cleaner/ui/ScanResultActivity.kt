@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.clean.cleaner.App
 import com.clean.cleaner.R
 import com.clean.cleaner.scan.CleanEngine
 import com.clean.cleaner.scan.DeepCleanScanner
@@ -23,8 +24,10 @@ import com.clean.cleaner.scan.LargeFileScanner
 import com.clean.cleaner.scan.ResidueScanner
 import com.clean.cleaner.scan.ScanItem
 import com.clean.cleaner.scan.SimilarImageScanner
+import com.clean.cleaner.scan.StorageHelper
 import com.clean.cleaner.scan.Walker
 import com.clean.cleaner.util.SizeUtils
+import com.clean.cleaner.util.StatusBarUtil
 
 @SuppressLint("SetTextI18n")
 class ScanResultActivity : AppCompatActivity() {
@@ -47,6 +50,7 @@ class ScanResultActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        StatusBarUtil.transparent(this, lightIcons = !StatusBarUtil.isDarkMode(this))
         setContentView(R.layout.activity_scan_result)
 
         type = intent.getStringExtra("type") ?: "large"
@@ -88,6 +92,8 @@ class ScanResultActivity : AppCompatActivity() {
         "residue" -> "卸载残留"
         "empty" -> "空文件夹"
         "deep" -> "微信/QQ 深度清理"
+        "recent" -> "最新文件"
+        "oldest" -> "最旧文件"
         else -> "扫描结果"
     }
 
@@ -112,6 +118,8 @@ class ScanResultActivity : AppCompatActivity() {
                     "deep" -> DeepCleanScanner(::throttlePath).scan()
                     "apk" -> scanApks()
                     "empty" -> scanEmptyDirs()
+                    "recent" -> scanByTime(true)
+                    "oldest" -> scanByTime(false)
                     else -> emptyList()
                 }
             } catch (e: Exception) {
@@ -176,6 +184,30 @@ class ScanResultActivity : AppCompatActivity() {
         return out
     }
 
+    private val timeFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+
+    /** 按修改时间列出最新/最旧的文件 */
+    private fun scanByTime(recent: Boolean): List<ScanItem> {
+        val files = ArrayList<java.io.File>()
+        Walker.walk(Walker.root, onFile = { f ->
+            if (!f.isDirectory && f.length() > 100 * 1024) {
+                files.add(f)
+            }
+            true
+        })
+        if (recent) files.sortByDescending { it.lastModified() }
+        else files.sortBy { it.lastModified() }
+        return files.take(100).map { f ->
+            ScanItem(
+                f.absolutePath, f.name, f.length(),
+                groupKey = "time",
+                groupLabel = if (recent) "最新文件" else "最旧文件",
+                kind = StorageHelper.categoryOf(f.name).let { if (it == "other") "doc" else it },
+                extra = "修改于 ${timeFormat.format(java.util.Date(f.lastModified()))}"
+            )
+        }
+    }
+
     private fun onScanDone(result: List<ScanItem>) {
         if (result.isEmpty()) {
             loadingOverlay.visibility = View.VISIBLE
@@ -211,6 +243,7 @@ class ScanResultActivity : AppCompatActivity() {
         Thread {
             val paths = sel.map { it.path }
             val (count, freed) = CleanEngine.deleteAll(paths)
+            App.addCleaned(freed)
             handler.post {
                 btnClean.isEnabled = true
                 Toast.makeText(this, "已删除 $count 项 · 释放 ${SizeUtils.format(freed)}", Toast.LENGTH_SHORT).show()
