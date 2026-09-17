@@ -1,6 +1,7 @@
 package com.clean.cleaner.scan
 
 import android.os.Environment
+import com.clean.cleaner.util.Settings
 import java.io.File
 
 /** 主界面一键扫描的汇总结果 */
@@ -28,7 +29,11 @@ data class MainScanResult(
     val mediaImage: Long = 0,
     val mediaVideo: Long = 0,
     val mediaAudio: Long = 0,
-    val mediaDoc: Long = 0
+    val mediaDoc: Long = 0,
+    /** Shizuku：Android/data 受限目录全量统计 */
+    val dataFiles: Long = 0,
+    val dataSize: Long = 0,
+    val dataCache: Long = 0
 )
 
 /** 主界面全局扫描：MediaStore 全量统计 + 一次文件遍历统计明细 */
@@ -83,6 +88,20 @@ class MainScan(
         val media = MediaScanner.scan(context)
         // 2) 文件遍历统计明细
         if (root.exists()) walkDir(root, inJunk = false, inResidue = false)
+        // 3) SAF 授权通道：Android/data 受限目录全量统计（MT管理器同款，无需 Shizuku）
+        var dataFiles = 0L
+        var dataSize = 0L
+        var dataCache = 0L
+        if (Settings.safTreeUri(context) != null) {
+            try {
+                SafScanner.scan(context)?.let {
+                    dataFiles = it.fileCount
+                    dataSize = it.totalSize
+                    dataCache = it.cacheSize
+                }
+            } catch (ignored: Exception) {
+            }
+        }
         return MainScanResult(
             junkSize = junkSize,
             deepSize = deepSize,
@@ -98,7 +117,8 @@ class MainScan(
             totalSize = totalSize,
             mediaFiles = media.fileCount, mediaSize = media.totalSize,
             mediaImage = media.imageCount, mediaVideo = media.videoCount,
-            mediaAudio = media.audioCount, mediaDoc = media.docCount
+            mediaAudio = media.audioCount, mediaDoc = media.docCount,
+            dataFiles = dataFiles, dataSize = dataSize, dataCache = dataCache
         )
     }
 
@@ -119,7 +139,9 @@ class MainScan(
             if (f.isDirectory) {
                 folderCount++
                 val children = f.listFiles()
-                if (children == null || children.isEmpty()) {
+                // null = 权限受限（如 Android/data 子目录），跳过但不计入空文件夹
+                if (children == null) continue
+                if (children.isEmpty()) {
                     emptyCount++
                     continue
                 }

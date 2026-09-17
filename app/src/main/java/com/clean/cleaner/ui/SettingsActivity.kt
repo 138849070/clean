@@ -1,10 +1,14 @@
 package com.clean.cleaner.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Switch
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import com.clean.cleaner.App
@@ -13,6 +17,22 @@ import com.clean.cleaner.util.Settings
 import com.clean.cleaner.util.StatusBarUtil
 
 class SettingsActivity : AppCompatActivity() {
+
+    /** SAF 选择器：授权 Android/data 访问（MT管理器同款） */
+    private val openTree =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            if (uri != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                } catch (ignored: Exception) {
+                }
+                Settings.setSafTreeUri(this, uri.toString())
+                Toast.makeText(this, "已授权 Android/data 访问，重新扫描即可生效", Toast.LENGTH_SHORT).show()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +64,19 @@ class SettingsActivity : AppCompatActivity() {
         etPeriodicDays.setText(Settings.periodicDays(this).toString())
 
         swAutoScan.setOnCheckedChangeListener { _, v -> Settings.setAutoScan(this, v) }
+        // SAF 授权：直接打开系统文件选择器并定位到 Android/data
+        findViewById<android.widget.TextView>(R.id.btnSafAuthorize).setOnClickListener {
+            val initialUri = try {
+                DocumentsContract.buildDocumentUri(
+                    "com.android.externalstorage.documents",
+                    "primary:Android/data"
+                )
+            } catch (e: Exception) {
+                null
+            }
+            if (initialUri != null) openTree.launch(initialUri)
+            else openTree.launch(null)
+        }
         swAutoClean.setOnCheckedChangeListener { _, v -> Settings.setAutoClean(this, v) }
         swEmptyFiles.setOnCheckedChangeListener { _, v -> Settings.setEmptyFiles(this, v) }
         swKeepScreen.setOnCheckedChangeListener { _, v -> Settings.setKeepScreen(this, v) }

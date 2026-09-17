@@ -49,6 +49,12 @@ object Settings {
         p(ctx).edit().putBoolean("dark_follow", v).apply()
     }
 
+    /** SAF 授权的 Android/data 目录 URI（MT管理器同款方式） */
+    fun safTreeUri(ctx: Context): String? = p(ctx).getString("saf_tree_uri", null)
+    fun setSafTreeUri(ctx: Context, v: String) {
+        p(ctx).edit().putString("saf_tree_uri", v).apply()
+    }
+
     /** 扫描/清理时屏幕常亮 */
     fun keepScreen(ctx: Context): Boolean = p(ctx).getBoolean("keep_screen", false)
     fun setKeepScreen(ctx: Context, v: Boolean) {

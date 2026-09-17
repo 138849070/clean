@@ -119,6 +119,25 @@ class MainActivity : AppCompatActivity() {
             startScan()
         }
         checkPeriodicClean()
+        ensureDataAccess()
+    }
+
+    private var hasPromptedDataAccess = false
+
+    /** 首次提醒授权 Android/data（MT管理器同款方式，扫全需要） */
+    private fun ensureDataAccess() {
+        if (hasPromptedDataAccess) return
+        if (Settings.safTreeUri(this) != null) return
+        if (!PermissionActivity.hasStorageAccess() || !PermissionActivity.hasMediaAccess()) return
+        hasPromptedDataAccess = true
+        AlertDialog.Builder(this)
+            .setTitle("授权访问 Android/data")
+            .setMessage("要扫全 Android/data 目录（各应用的数据和缓存），需要一次系统文件夹授权（MT管理器同款方式，无需安装任何东西）。\n\n是否现在去设置页授权？")
+            .setPositiveButton("去设置") { _, _ ->
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
+            .setNegativeButton("跳过", null)
+            .show()
     }
 
     override fun onDestroy() {
@@ -314,14 +333,16 @@ class MainActivity : AppCompatActivity() {
         btnScan.isEnabled = true
         btnScan.text = "重新扫描"
 
-        // 统计行：优先用 MediaStore 全量数据（更全），File 遍历兜底
-        val fileTotal = if (r.mediaFiles > r.fileCount) r.mediaFiles else r.fileCount.toLong()
-        val sizeTotal = if (r.mediaSize > r.totalSize) r.mediaSize else r.totalSize
+        // 统计行：MediaStore 全量 + File 遍历 + Shizuku Android/data，三者合并
+        val baseFiles = if (r.mediaFiles > r.fileCount) r.mediaFiles else r.fileCount.toLong()
+        val fileTotal = baseFiles + r.dataFiles
+        val baseSize = if (r.mediaSize > r.totalSize) r.mediaSize else r.totalSize
+        val sizeTotal = baseSize + r.dataSize
         tvStatTotal.text = SizeUtils.compact(sizeTotal)
         tvStatFolders.text = "${r.folderCount}个"
         tvStatFiles.text = "${fileTotal}个"
 
-        tag(r, "junk")?.text = "大于${SizeUtils.compact(r.junkSize)}"
+        tag(r, "junk")?.text = "大于${SizeUtils.compact(r.junkSize + r.dataCache)}"
         tag(r, "empty")?.text = "${r.emptyCount}个"
         tag(r, "residue")?.text = "${r.residueCount}个(${SizeUtils.compact(r.residueSize)})"
         tag(r, "apk")?.text = "${r.apkCount}个(${SizeUtils.compact(r.apkSize)})"

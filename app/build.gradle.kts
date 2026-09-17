@@ -11,8 +11,8 @@ android {
         applicationId = "com.clean.cleaner"
         minSdk = 24
         targetSdk = 33
-        versionCode = 8
-        versionName = "1.6.0"
+        versionCode = 9
+        versionName = "1.7.0"
     }
 
     buildTypes {
@@ -43,4 +43,6 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // SAF 文档树访问（MT管理器同款，读取 Android/data）
+    implementation("androidx.documentfile:documentfile:1.0.1")
 }
