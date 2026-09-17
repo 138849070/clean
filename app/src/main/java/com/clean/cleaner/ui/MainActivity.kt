@@ -284,9 +284,10 @@ class MainActivity : AppCompatActivity() {
         scanThread = Thread {
             val result = try {
                 MainScan(
+                    context = this@MainActivity,
                     installedPackages = installed,
-                    excludedPaths = Settings.excludeList(this).toSet(),
-                    scanEmptyFiles = Settings.emptyFiles(this)
+                    excludedPaths = Settings.excludeList(this@MainActivity).toSet(),
+                    scanEmptyFiles = Settings.emptyFiles(this@MainActivity)
                 ) {}.scan()
             } catch (e: Exception) {
                 null
@@ -313,9 +314,12 @@ class MainActivity : AppCompatActivity() {
         btnScan.isEnabled = true
         btnScan.text = "重新扫描"
 
-        tvStatTotal.text = SizeUtils.compact(r.totalSize)
+        // 统计行：优先用 MediaStore 全量数据（更全），File 遍历兜底
+        val fileTotal = if (r.mediaFiles > r.fileCount) r.mediaFiles else r.fileCount.toLong()
+        val sizeTotal = if (r.mediaSize > r.totalSize) r.mediaSize else r.totalSize
+        tvStatTotal.text = SizeUtils.compact(sizeTotal)
         tvStatFolders.text = "${r.folderCount}个"
-        tvStatFiles.text = "${r.fileCount}个"
+        tvStatFiles.text = "${fileTotal}个"
 
         tag(r, "junk")?.text = "大于${SizeUtils.compact(r.junkSize)}"
         tag(r, "empty")?.text = "${r.emptyCount}个"

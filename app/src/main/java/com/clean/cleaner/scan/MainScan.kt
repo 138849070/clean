@@ -21,11 +21,19 @@ data class MainScanResult(
     val emptyFileCount: Int = 0,
     val folderCount: Int = 0,
     val fileCount: Int = 0,
-    val totalSize: Long = 0
+    val totalSize: Long = 0,
+    /** MediaStore 全量统计（更全） */
+    val mediaFiles: Long = 0,
+    val mediaSize: Long = 0,
+    val mediaImage: Long = 0,
+    val mediaVideo: Long = 0,
+    val mediaAudio: Long = 0,
+    val mediaDoc: Long = 0
 )
 
-/** 主界面全局扫描：一次遍历统计所有功能入口的规模 */
+/** 主界面全局扫描：MediaStore 全量统计 + 一次文件遍历统计明细 */
 class MainScan(
+    private val context: android.content.Context,
     private val installedPackages: Set<String>,
     private val excludedPaths: Set<String> = emptySet(),
     private val scanEmptyFiles: Boolean = false,
@@ -71,8 +79,10 @@ class MainScan(
 
     fun scan(): MainScanResult {
         root = Environment.getExternalStorageDirectory()
-        if (!root.exists()) return MainScanResult()
-        walkDir(root, inJunk = false, inResidue = false)
+        // 1) MediaStore 全量统计
+        val media = MediaScanner.scan(context)
+        // 2) 文件遍历统计明细
+        if (root.exists()) walkDir(root, inJunk = false, inResidue = false)
         return MainScanResult(
             junkSize = junkSize,
             deepSize = deepSize,
@@ -85,7 +95,10 @@ class MainScan(
             residueCount = residueCount, residueSize = residueSize,
             emptyCount = emptyCount, emptyFileCount = emptyFileCount,
             folderCount = folderCount, fileCount = fileCount,
-            totalSize = totalSize
+            totalSize = totalSize,
+            mediaFiles = media.fileCount, mediaSize = media.totalSize,
+            mediaImage = media.imageCount, mediaVideo = media.videoCount,
+            mediaAudio = media.audioCount, mediaDoc = media.docCount
         )
     }
 
