@@ -35,9 +35,9 @@ class ScanResultAdapter(
         )
     }
 
-    private val thumbExecutor = Executors.newSingleThreadExecutor()
+    private val thumbExecutor = Executors.newFixedThreadPool(2)
     private val thumbHandler = Handler(Looper.getMainLooper())
-    private val thumbCache = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
+    private val thumbCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
 
@@ -224,6 +224,8 @@ class ScanResultAdapter(
             val frame = try {
                 retriever.getFrameAtTime(1_000_000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                     ?: retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    ?: retriever.getFrameAtTime(1_000_000)
+                    ?: retriever.getFrameAtTime(0)
             } finally {
                 retriever.release()
             }
@@ -233,30 +235,56 @@ class ScanResultAdapter(
         }
     }
 
-    /** 受限目录（Android/data）视频：Shizuku 复制到本应用目录后抽帧，再删除临时文件 */
+    /** 受限目录（Android/data）视频：Shizuku 复制后抽帧，再删除临时文件。
+     *  先复制前 96MB（MP4 faststart 可抽），失败且文件 ≤1.5GB 再完整复制。 */
     private fun decodeVideoThumbViaShizuku(path: String, ctx: android.content.Context): Bitmap? {
         return try {
             if (!com.clean.cleaner.scan.ShizukuShell.available()) return null
             val src = java.io.File(path)
-            if (!src.isFile || src.length() > 400L * 1024 * 1024) return null
-            val tmp = java.io.File(ctx.getExternalFilesDir(null), "vthumb_${System.nanoTime()}.mp4")
-            tmp.parentFile?.mkdirs()
-            val out = com.clean.cleaner.scan.ShizukuShell.exec("cp \"$path\" \"${tmp.absolutePath}\" 2>/dev/null; echo DONE")
-            if (out?.contains("DONE") == true && tmp.exists() && tmp.length() > 0) {
-                val retriever = android.media.MediaMetadataRetriever()
-                retriever.setDataSource(tmp.absolutePath)
-                val frame = try {
-                    retriever.getFrameAtTime(1_000_000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                        ?: retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                } finally {
-                    retriever.release()
+            if (!src.isFile) return null
+            val cacheDir = ctx.getExternalCacheDir() ?: return null
+            cacheDir.mkdirs()
+            // 第一步：只复制前 96MB
+            var tmp: java.io.File? = null
+            var bmp: Bitmap? = null
+            tmp = java.io.File(cacheDir, "vthumb_${System.nanoTime()}.mp4")
+            val ok1 = com.clean.cleaner.scan.ShizukuShell.exec(
+                "head -c 100663296 \"$path\" > \"${tmp.absolutePath}\" 2>/dev/null; echo DONE"
+            )?.contains("DONE") == true
+            if (ok1 && tmp.exists() && tmp.length() > 0) {
+                bmp = retrieverFrame(tmp.absolutePath)
+            }
+            tmp.delete()
+            // 第二步：完整复制（文件 ≤1.5GB 才尝试）
+            if (bmp == null && src.length() <= 1536L * 1024 * 1024) {
+                tmp = java.io.File(cacheDir, "vthumb_${System.nanoTime()}.mp4")
+                val ok2 = com.clean.cleaner.scan.ShizukuShell.exec(
+                    "cp \"$path\" \"${tmp.absolutePath}\" 2>/dev/null; echo DONE"
+                )?.contains("DONE") == true
+                if (ok2 && tmp.exists() && tmp.length() > 0) {
+                    bmp = retrieverFrame(tmp.absolutePath)
                 }
                 tmp.delete()
-                frame?.let { scaleDown(it) }
-            } else {
-                tmp.delete()
-                null
             }
+            bmp?.let { scaleDown(it) }
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    private fun retrieverFrame(path: String): Bitmap? {
+        return try {
+            val retriever = android.media.MediaMetadataRetriever()
+            retriever.setDataSource(path)
+            val frame = try {
+                retriever.getFrameAtTime(1_000_000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    ?: retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    ?: retriever.getFrameAtTime(1_000_000)
+                    ?: retriever.getFrameAtTime(0)
+            } finally {
+                retriever.release()
+            }
+            frame
         } catch (e: Throwable) {
             null
         }
