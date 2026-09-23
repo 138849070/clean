@@ -1,4 +1,4 @@
-package com.clean.cleaner.ui
+﻿package com.clean.cleaner.ui
 
 import android.animation.ValueAnimator
 import android.content.Context
@@ -19,7 +19,7 @@ class RadarView @JvmOverloads constructor(
     private var pulse = 0f
 
     private val sweepPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF35A0FF.toInt() // 蓝色扇区
+        color = 0xFF2997FF.toInt() // 蓝色扇区
         style = Paint.Style.FILL
     }
     private val sweepShader = android.graphics.SweepGradient(0f, 0f, intArrayOf(
@@ -95,7 +95,7 @@ class RadarView @JvmOverloads constructor(
         canvas.rotate(rotation)
         val sweep = RectF(-radius, -radius, radius, radius)
         sweepPaint.shader = android.graphics.SweepGradient(0f, 0f,
-            intArrayOf(Color.TRANSPARENT, 0x2235A0FF.toInt(), 0x9935A0FF.toInt()),
+            intArrayOf(Color.TRANSPARENT, 0x222997FF.toInt(), 0x992997FF.toInt()),
             floatArrayOf(0f, 0.6f, 1f))
         canvas.drawArc(sweep, 0f, 78f, true, sweepPaint)
         canvas.restore()

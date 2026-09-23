@@ -6,10 +6,10 @@
         <item name="colorPrimaryContainer">#1B3050</item>
         <item name="colorOnPrimaryContainer">#BFD9FF</item>
         <item name="colorSecondary">@color/accent</item>
-        <item name="android:colorBackground">#12151A</item>
-        <item name="colorSurface">#1C2128</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="colorSurface">@color/card</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:navigationBarColor">#12151A</item>
+        <item name="android:navigationBarColor">@color/bg</item>
     </style>
 </resources>

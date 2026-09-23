@@ -1,8 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient
-        android:angle="45"
-        android:startColor="#4A9BFF"
-        android:endColor="#1E5FEF"
-        android:type="linear" />
-</shape>
+<!-- 顶部深色渐变卡：深蓝黑底 + 蓝色光斑，底部大圆角（毛玻璃头部） -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 深色渐变底（顶部贴状态栏，仅底部圆角） -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="45"
+                android:startColor="@color/header_start"
+                android:endColor="@color/header_end"
+                android:type="linear" />
+            <corners
+                android:bottomLeftRadius="24dp"
+                android:bottomRightRadius="24dp" />
+        </shape>
+    </item>
+    <!-- 左上蓝色光斑：毛玻璃的“光源” -->
+    <item
+        android:gravity="top|left"
+        android:width="320dp"
+        android:height="320dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="160dp"
+                android:startColor="#402997FF"
+                android:endColor="#002997FF" />
+        </shape>
+    </item>
+    <!-- 右上淡紫光斑 -->
+    <item
+        android:gravity="top|right"
+        android:width="240dp"
+        android:height="240dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="120dp"
+                android:startColor="#247D7DFF"
+                android:endColor="#007D7DFF" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,21 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#2F7BF5</color>
-    <color name="primary_dark">#1E5FEF</color>
-    <color name="primary_light">#E8F1FE</color>
-    <color name="accent">#35A0FF</color>
-    <color name="bg">#F5F7FA</color>
+    <!-- Apple 风格浅色主题（参考 12306 票根编辑器设计令牌） -->
+    <color name="primary">#0066CC</color>
+    <color name="primary_dark">#0050A0</color>
+    <color name="primary_light">#E3EEFC</color>
+    <color name="accent">#0066CC</color>
+    <color name="bg">#E9EEF6</color>
     <color name="card">#FFFFFF</color>
-    <color name="text_main">#1A1A1A</color>
-    <color name="text_secondary">#8A9099</color>
+    <color name="text_main">#1D1D1F</color>
+    <color name="text_secondary">#6E6E73</color>
     <color name="divider">#EDF0F3</color>
     <color name="orange">#FF9500</color>
-    <color name="red">#FF3B30</color>
-    <color name="blue">#2F7BF5</color>
-    <color name="purple">#AF52DE</color>
+    <color name="red">#E02F24</color>
+    <color name="blue">#0066CC</color>
+    <color name="purple">#5E5CE6</color>
     <color name="cyan">#32ADE6</color>
+    <color name="green">#16A34A</color>
     <color name="white">#FFFFFF</color>
     <color name="black_40">#66000000</color>
     <color name="white_50">#80FFFFFF</color>
     <color name="white_70">#B3FFFFFF</color>
+
+    <!-- 玻璃材质（浅色） -->
+    <color name="glass_fill">#9EFFFFFF</color>
+    <color name="glass_stroke">#130F172A</color>
+    <color name="glass_edge">#D9FFFFFF</color>
+    <color name="glass_btn">#FFFFFF</color>
+    <!-- 头部渐变（浅色） -->
+    <color name="header_start">#3D7EFF</color>
+    <color name="header_end">#0A5CD6</color>
 </resources>

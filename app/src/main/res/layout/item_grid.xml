@@ -5,21 +5,23 @@
     android:layout_weight="1"
     android:orientation="vertical"
     android:gravity="center"
-    android:paddingTop="16dp"
-    android:paddingBottom="16dp">
+    android:layout_margin="5dp"
+    android:background="@drawable/bg_grid_item"
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp">
 
     <TextView
         android:id="@+id/tvIcon"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
         android:gravity="center"
-        android:textSize="22sp" />
+        android:textSize="24sp" />
 
     <TextView
         android:id="@+id/tvName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="7dp"
         android:textSize="13sp"
         android:textColor="@color/text_main"
         android:text="功能" />
